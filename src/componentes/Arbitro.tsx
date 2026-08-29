@@ -1,6 +1,5 @@
 import { partidoListo } from "../nucleo";
 import type { Partido, Torneo } from "../nucleo";
-import { Ic } from "./Iconos";
 import { TarjetaPartido } from "./TarjetaPartido";
 
 interface Props {
@@ -25,11 +24,8 @@ export function Arbitro({ t, mesa, alElegirMesa, alAbrir }: Props) {
 
   return (
     <div>
-      <div className="vin t1" data-n="MESA">
-        <h2>
-          <Ic n="raq" />
-          Tu mesa
-        </h2>
+      <div className="sec">
+        <h2>Tu mesa</h2>
         <p className="sub">Elige el número de mesa que te tocó. Solo verás los partidos de esa mesa.</p>
         <div className="mesabtns">
           {Array.from({ length: Math.max(1, t.mesas) }, (_, i) => i + 1).map((m) => (
@@ -51,7 +47,6 @@ export function Arbitro({ t, mesa, alElegirMesa, alAbrir }: Props) {
 
       {!cola.length && (
         <p className="vacio">
-          <Ic n="raq" />
           {mesa == null ? "Elige tu mesa arriba." : `No hay partidos en la mesa ${mesa} todavía.`}
         </p>
       )}

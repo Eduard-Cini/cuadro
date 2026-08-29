@@ -94,18 +94,20 @@ export default function App() {
         <Sprite />
         <div id="splash" className="on">
           <div className="sp-top">
-            <h1 className="marca reg">
+            <h1 className="marca">
               CUA<em>DRO</em>
             </h1>
             <p>¿Quién eres en este torneo?</p>
           </div>
           <div className="sp-roles">
             <button className="rol j" onClick={() => elegirRol("juez")}>
+              <i className="capa trama-clara" />
               <Ic n="mesa" />
               <h3>Mesa de control</h3>
               <p>Configuras el torneo, cargas jugadores, haces el sorteo y sigues todas las mesas.</p>
             </button>
             <button className="rol t" onClick={() => elegirRol("arbitro")}>
+              <i className="capa trama-clara" />
               <Ic n="raq" />
               <h3>Tablero</h3>
               <p>Eliges tu mesa y llevas el marcador. Nada más: sin configuración ni sorteos.</p>
@@ -119,10 +121,10 @@ export default function App() {
   return (
     <>
       <Sprite />
-      <div id="app">
-        <header className="cabecera">
+      <header className="banda">
+        <div className="banda-int">
           <div>
-            <h1 className="marca reg">
+            <h1 className="marca">
               CUA<em>DRO</em>
             </h1>
             <p className="lema">
@@ -135,7 +137,9 @@ export default function App() {
             <Ic n="raq" />
             <span>{rol === "juez" ? "Mesa de control" : "Tablero"}</span>
           </button>
-        </header>
+        </div>
+      </header>
+      <div id="app">
 
         {rol === "juez" ? (
           <Juez t={t} actualizar={actualizar} alAbrir={setAbierto} />

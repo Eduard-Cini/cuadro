@@ -13,7 +13,6 @@ import {
 } from "../nucleo";
 import type { Formato, Torneo } from "../nucleo";
 import { leerJugadores, nuevoId } from "../almacen";
-import { Ic } from "./Iconos";
 import { TarjetaPartido } from "./TarjetaPartido";
 
 type Vista = "torneo" | "jugadores" | "arbitros" | "grupos" | "cuadro" | "rol";
@@ -146,15 +145,15 @@ export function Juez({ t, actualizar, alAbrir }: Props) {
         ))}
       </nav>
 
-      {nota && <div className="aviso-relaj" style={{ marginBottom: "1rem" }}><Ic n="raq" /><div>{nota}</div></div>}
+      {nota && <p className="nota">{nota}</p>}
 
       {/* ---------------- torneo ---------------- */}
       {vista === "torneo" && (
-        <div className="vin t1" data-n="01">
-          <h2><Ic n="mesa" />El torneo</h2>
+        <div className="sec">
+          <h2>El torneo</h2>
           <p className="sub">El formato puede ser distinto en grupos y en la eliminatoria, que es lo normal.</p>
           <div className="campos">
-            {campo("Nombre", t.nombre, (v) => actualizar((d) => void (d.nombre = v)), { placeholder: "Copa de barrio" })}
+            {campo("Nombre", t.nombre, (v) => actualizar((d) => void (d.nombre = v)))}
             {campo("Mesas", t.mesas, (v) => actualizar((d) => void (d.mesas = Math.max(1, Number(v) || 1))), { type: "number", min: 1, max: 24 })}
             <label className="f">
               <span>Formato en grupos</span>
@@ -181,8 +180,8 @@ export function Juez({ t, actualizar, alAbrir }: Props) {
 
       {/* ---------------- jugadores ---------------- */}
       {vista === "jugadores" && (
-        <div className="vin t2" data-n="02">
-          <h2><Ic n="raq" />Jugadores</h2>
+        <div className="sec">
+          <h2>Jugadores</h2>
           <p className="sub">El ranking se usa para sembrar. Sin ranking, el sorteo es al azar.</p>
           <div className="campos">
             {campo("Nombre", nuevo.nombre, (v) => setNuevo({ ...nuevo, nombre: v }), {
@@ -194,9 +193,9 @@ export function Juez({ t, actualizar, alAbrir }: Props) {
           </div>
           <div className="fila">
             <button className="btn" onClick={agregarJugador}>Agregar</button>
-            <button className="btn sec chico" onClick={() => setBulk((b) => !b)}>Pegar lista o cargar CSV</button>
+            <button className="btn leve" onClick={() => setBulk((b) => !b)}>Pegar lista o cargar CSV</button>
             <button
-              className="btn sec chico"
+              className="btn grave"
               onClick={() => {
                 if (!t.jugadores.length || !confirm("Se borran los jugadores, los grupos y los partidos. ¿Seguir?")) return;
                 actualizar((d) => {
@@ -226,7 +225,7 @@ export function Juez({ t, actualizar, alAbrir }: Props) {
                 />
               </label>
               <div className="fila">
-                <button className="btn verde chico" onClick={() => { importar(texto); setTexto(""); }}>
+                <button className="btn leve" onClick={() => { importar(texto); setTexto(""); }}>
                   Importar lo pegado
                 </button>
               </div>
@@ -258,14 +257,14 @@ export function Juez({ t, actualizar, alAbrir }: Props) {
                 </li>
               ))}
           </ul>
-          {!t.jugadores.length && <p className="vacio"><Ic n="raq" />Todavía no hay jugadores.</p>}
+          {!t.jugadores.length && <p className="vacio">Todavía no hay jugadores.</p>}
         </div>
       )}
 
       {/* ---------------- árbitros ---------------- */}
       {vista === "arbitros" && (
-        <div className="vin t1" data-n="03">
-          <h2><Ic n="mesa" />Árbitros</h2>
+        <div className="sec">
+          <h2>Árbitros</h2>
           <p className="sub">Cada uno queda en una mesa. Su nombre sale en el tablero.</p>
           <div className="campos">
             {campo("Nombre", arb.nombre, (v) => setArb({ ...arb, nombre: v }), { placeholder: "Nombre del árbitro" })}
@@ -298,20 +297,20 @@ export function Juez({ t, actualizar, alAbrir }: Props) {
                 </li>
               ))}
           </ul>
-          {!t.arbitros.length && <p className="vacio"><Ic n="raq" />Todavía no hay árbitros.</p>}
+          {!t.arbitros.length && <p className="vacio">Todavía no hay árbitros.</p>}
         </div>
       )}
 
       {/* ---------------- grupos ---------------- */}
       {vista === "grupos" && (
         <>
-          <div className="vin t2" data-n="04">
-            <h2><Ic n="raq" />Sorteo</h2>
+          <div className="sec">
+            <h2>Sorteo</h2>
             <p className="sub">Reparte por siembra y trata de que no coincidan compañeros de club. Si no alcanza, lo dice.</p>
             <div className="fila">
               <button className="btn" onClick={hacerSorteo}>Sortear grupos</button>
               <button
-                className="btn sec"
+                className="btn leve"
                 onClick={() => {
                   if (!t.grupos.length || !confirm("Se borran los grupos y todos los partidos. ¿Seguir?")) return;
                   actualizar((d) => {
@@ -326,8 +325,7 @@ export function Juez({ t, actualizar, alAbrir }: Props) {
             </div>
             {t.grupos.length > 0 &&
               (t.relajaciones.length ? (
-                <div className="aviso-relaj">
-                  <Ic n="raq" />
+                <div className="nota mal">
                   <div>
                     <b>No se pudo separar a todos.</b>
                     {t.relajaciones.map((r, i) => (
@@ -336,10 +334,9 @@ export function Juez({ t, actualizar, alAbrir }: Props) {
                   </div>
                 </div>
               ) : (
-                <div className="aviso-relaj" style={{ background: "rgba(28,106,96,.16)", borderColor: "var(--verde)" }}>
-                  <Ic n="raq" />
-                  <div>Se respetaron todas las restricciones: sembrados repartidos y clubes separados.</div>
-                </div>
+                <p className="nota bien">
+                  Se respetaron todas las restricciones: sembrados repartidos y clubes separados.
+                </p>
               ))}
           </div>
 
@@ -349,8 +346,8 @@ export function Juez({ t, actualizar, alAbrir }: Props) {
               const ord = clasificar(gr.jugadores, suyos, t.formatoGrupos);
               const m = estadisticas(gr.jugadores, suyos, t.formatoGrupos);
               return (
-                <div key={gr.id} className="vin" data-n={gr.nombre.slice(-1)}>
-                  <h2><Ic n="raq" />{gr.nombre}</h2>
+                <div key={gr.id} className="grupo">
+                  <h3>{gr.nombre}</h3>
                   <table className="tab-pos">
                     <thead>
                       <tr><th /><th>Jugador</th><th>PJ</th><th>Sets</th><th>Pts</th></tr>
@@ -371,19 +368,19 @@ export function Juez({ t, actualizar, alAbrir }: Props) {
               );
             })}
           </div>
-          {!t.grupos.length && <p className="vacio"><Ic n="raq" />Sin grupos. Sortea desde arriba.</p>}
+          {!t.grupos.length && <p className="vacio">Sin grupos. Sortea desde arriba.</p>}
         </>
       )}
 
       {/* ---------------- cuadro ---------------- */}
       {vista === "cuadro" && (
         <>
-          <div className="vin t1" data-n="05">
-            <h2><Ic n="mesa" />Eliminatoria</h2>
+          <div className="sec">
+            <h2>Eliminatoria</h2>
             <p className="sub">Toma a los que avanzan de cada grupo y cruza primeros contra segundos.</p>
             <div className="fila">
               <button className="btn" onClick={hacerCuadro}>Armar cuadro</button>
-              <button className="btn sec" onClick={() => actualizar((d) => void (d.partidos = d.partidos.filter((p) => p.etapa !== "final")))}>
+              <button className="btn leve" onClick={() => actualizar((d) => void (d.partidos = d.partidos.filter((p) => p.etapa !== "final")))}>
                 Borrar cuadro
               </button>
             </div>
@@ -422,21 +419,21 @@ export function Juez({ t, actualizar, alAbrir }: Props) {
               </div>
             ))}
           </div>
-          {!finales.length && <p className="vacio"><Ic n="raq" />Sin cuadro todavía.</p>}
+          {!finales.length && <p className="vacio">Sin cuadro todavía.</p>}
         </>
       )}
 
       {/* ---------------- rol de mesas ---------------- */}
       {vista === "rol" && (
         <>
-          <div className="vin t2" data-n="06">
-            <h2><Ic n="mesa" />Rol de mesas</h2>
+          <div className="sec">
+            <h2>Rol de mesas</h2>
             <p className="sub">Orden de juego. Se evita que alguien juegue dos partidos seguidos.</p>
           </div>
           {t.partidos.filter((p) => p.aId && p.bId).map((p) => (
             <TarjetaPartido key={p.id} t={t} p={p} alAbrir={alAbrir} />
           ))}
-          {!t.partidos.some((p) => p.aId && p.bId) && <p className="vacio"><Ic n="raq" />Sin partidos.</p>}
+          {!t.partidos.some((p) => p.aId && p.bId) && <p className="vacio">Sin partidos.</p>}
         </>
       )}
     </div>

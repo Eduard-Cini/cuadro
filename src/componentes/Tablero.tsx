@@ -53,14 +53,17 @@ export function Tablero({ t, p, alPunto, alDeshacer, alSalir }: Props) {
     const j = cual === "a" ? a : b;
     const pts = cual === "a" ? st.pa : st.pb;
     const sets = cual === "a" ? st.sets.a : st.sets.b;
+    // El lado que saca ocupa más pantalla: la forma dice quién tiene
+    // el servicio antes que cualquier etiqueta.
+    const saca = !st.terminado && st.saca === cual;
     return (
       <button
-        className={`lado ${cual}`}
+        className={saca ? `lado ${cual} saca` : `lado ${cual}`}
         onClick={() => anotar(cual)}
         aria-label={`Punto para ${j?.nombre ?? ""}`}
       >
-        <i className="lineas" key={`l${golpe?.lado === cual ? golpe.n : 0}`}
-           style={{ animation: golpe?.lado === cual ? undefined : "none" }} />
+        <i className="capa trama-clara" />
+        {golpe?.lado === cual && <i className="lineas" key={`l${golpe.n}`} />}
         <span className="jn">{j?.nombre ?? "—"}</span>
         <span className="jc">{j?.club ?? ""}</span>
         <span className="pt num" key={`p${golpe?.lado === cual ? golpe.n : 0}`}>
@@ -71,9 +74,9 @@ export function Tablero({ t, p, alPunto, alDeshacer, alSalir }: Props) {
             <i key={i} className={i < sets ? "pip on" : "pip"} />
           ))}
         </span>
-        <span className={!st.terminado && st.saca === cual ? "saque on" : "saque"}>
+        <span className={saca ? "saque on" : "saque"}>
           <Ic n="raq" />
-          Saque
+          <span>Saque</span>
         </span>
         {golpe?.lado === cual && (
           <span className="sfx" key={`s${golpe.n}`}>
@@ -141,6 +144,21 @@ export function Tablero({ t, p, alPunto, alDeshacer, alSalir }: Props) {
         )}
       </div>
 
+      {/* los últimos puntos, como una tira de viñetas */}
+      <div className="tira" aria-hidden="true">
+        {(() => {
+          const N = 24;
+          const ult = p.eventos.slice(-N);
+          const huecos = Math.max(0, N - ult.length);
+          return [
+            ...Array.from({ length: huecos }, (_, i) => <i key={`v${i}`} className="vacia" />),
+            ...ult.map((ev, i) => (
+              <i key={`e${i}`} className={i === ult.length - 1 ? `${ev.j} ultimo` : ev.j} />
+            )),
+          ];
+        })()}
+      </div>
+
       <div className="tb-pie">
         <div className="sets">
           {st.historial.map((s, i) => (
@@ -151,11 +169,7 @@ export function Tablero({ t, p, alPunto, alDeshacer, alSalir }: Props) {
               </b>
             </span>
           ))}
-          {st.deuce && !st.terminado && (
-            <span>
-              <b>VENTAJA</b>
-            </span>
-          )}
+          {st.deuce && !st.terminado && <span className="vent">Ventaja</span>}
         </div>
         <span className="sp" />
         <button className="bpie" onClick={() => setVolteado((v) => !v)}>
