@@ -22,8 +22,8 @@
   --tinta-3: #6e776f;
   --rojo: #e2401f;
   --rojo-2: #a82a11;
-  --verde: #12564f;
-  --verde-2: #0a3833;
+  --azul: #1b5a94;
+  --azul-2: #103a61;
   --mostaza: #c98a10;
 
   --display: "Dela Gothic One", "Arial Black", sans-serif;
@@ -408,10 +408,10 @@ input[type="file"] {
 }
 /* Quien clasifica se marca con tono, como en una tabla impresa. */
 .tab-pos tr.clasifica td:first-child {
-  box-shadow: inset 3px 0 0 var(--verde);
+  box-shadow: inset 3px 0 0 var(--azul);
 }
 .tab-pos tr.clasifica td {
-  background: rgba(18, 86, 79, 0.09);
+  background: rgba(27, 90, 148, 0.10);
 }
 
 .nota {
@@ -424,7 +424,7 @@ input[type="file"] {
   margin: 1.1rem 0 0;
 }
 .nota.bien {
-  border-left-color: var(--verde);
+  border-left-color: var(--azul);
 }
 .nota.mal {
   border-left-color: var(--rojo);
@@ -470,7 +470,7 @@ input[type="file"] {
   font-weight: 700;
 }
 .pj .vs .b {
-  color: var(--verde);
+  color: var(--azul);
   font-weight: 700;
 }
 .pj .vs .sep {
@@ -596,7 +596,7 @@ input[type="file"] {
   background: var(--rojo);
 }
 .rol.t {
-  background: var(--verde);
+  background: var(--azul);
 }
 .rol:hover {
   flex-grow: 1.15;
@@ -710,16 +710,29 @@ input[type="file"] {
   padding: 0.9rem 0.7rem;
   font-family: inherit;
   color: var(--papel);
-  transition: flex-grow 0.32s cubic-bezier(0.3, 0.8, 0.3, 1);
 }
-.lado.saca {
-  flex-grow: 1.42;
+/* El saque se marca con una franja en el canto, no moviendo el panel:
+   cambia de lado cada dos puntos y ver la pantalla reacomodarse todo
+   el partido marea a quien está capturando. */
+.lado::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 9px;
+  background: var(--papel);
+  opacity: 0;
+  z-index: 3;
+}
+.lado.saca::after {
+  opacity: 1;
 }
 .lado.a {
   background: var(--rojo);
 }
 .lado.b {
-  background: var(--verde);
+  background: var(--azul);
 }
 .lado:active {
   filter: brightness(0.87);
@@ -734,7 +747,10 @@ input[type="file"] {
   opacity: 0.45;
   pointer-events: none;
 }
-.lado > *:not(.capa) {
+/* Solo el contenido se levanta sobre la trama. Las capas de efecto ya
+   son absolutas y esta regla les estaba quitando el posicionamiento,
+   con lo que ocupaban sitio y empujaban el marcador al anotar. */
+.lado > *:not(.capa):not(.lineas):not(.sfx) {
   position: relative;
   z-index: 2;
 }
@@ -779,25 +795,28 @@ input[type="file"] {
   overflow-wrap: anywhere;
 }
 .lado .jc {
-  font-size: 0.78rem;
-  opacity: 0.78;
-  min-height: 1.1em;
+  font-size: 0.82rem;
+  opacity: 0.8;
+  min-height: 1.15em;
+  margin-bottom: 0.5rem;
 }
 .lado .pt {
   font-family: var(--datos);
   font-weight: 700;
-  font-size: clamp(6rem, 38vh, 18rem);
-  line-height: 0.78;
+  font-size: clamp(5.5rem, 34vh, 16rem);
+  /* la caja del glifo se recorta a su altura real para que el número
+     no invada la línea de arriba */
+  line-height: 0.9;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
-  animation: golpe 0.26s cubic-bezier(0.2, 1.6, 0.4, 1);
+  animation: golpe 0.2s ease-out;
 }
 @keyframes golpe {
   0% {
-    transform: scale(0.74) rotate(-3deg);
+    transform: scale(0.9);
   }
-  60% {
-    transform: scale(1.09) rotate(1.5deg);
+  55% {
+    transform: scale(1.04);
   }
   100% {
     transform: scale(1);
@@ -874,23 +893,8 @@ input[type="file"] {
   opacity: 1;
 }
 .saque svg.ic {
-  width: 1.5em;
-  height: 1.5em;
-  animation: vaiven 1.6s ease-in-out infinite;
-}
-@keyframes vaiven {
-  0%,
-  100% {
-    transform: rotate(-12deg);
-  }
-  50% {
-    transform: rotate(12deg);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .saque svg.ic {
-    animation: none;
-  }
+  width: 1.4em;
+  height: 1.4em;
 }
 
 /* Tira de viñetas con los últimos puntos. Es la forma en que el ánime
@@ -912,7 +916,7 @@ input[type="file"] {
   background: var(--rojo);
 }
 .tira i.b {
-  background: var(--verde);
+  background: var(--azul);
 }
 .tira i.vacia {
   background: #1d2723;
@@ -974,6 +978,30 @@ input[type="file"] {
 }
 .bpie.rojo:active {
   background: var(--rojo);
+  color: var(--papel);
+}
+
+/* barra de preparación: solo antes del primer punto */
+.tb-pie.preparar {
+  gap: 0.5rem 0.8rem;
+}
+.prep-eti {
+  font-family: var(--datos);
+  font-size: 1.05rem;
+  color: var(--tinta-3);
+}
+.prep-op {
+  display: flex;
+  gap: 0.3rem;
+}
+.bpie.on.a {
+  background: var(--rojo);
+  border-color: var(--rojo);
+  color: var(--papel);
+}
+.bpie.on.b {
+  background: var(--azul);
+  border-color: var(--azul);
   color: var(--papel);
 }
 

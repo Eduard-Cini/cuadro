@@ -5,9 +5,12 @@ interface Props {
   t: Torneo;
   p: Partido;
   alAbrir: (id: string) => void;
+  /** Qué va en la columna izquierda. El juez ve la mesa; el árbitro,
+      que ya está en su mesa, ve el turno dentro de su cola. */
+  numero?: number;
 }
 
-export function TarjetaPartido({ t, p, alAbrir }: Props) {
+export function TarjetaPartido({ t, p, alAbrir, numero }: Props) {
   const setsPara = p.etapa === "final" ? t.formatoFinales : t.formatoGrupos;
   const st = reducir(p, setsPara);
   const nom = (id: string | null) => t.jugadores.find((j) => j.id === id)?.nombre ?? "por definir";
@@ -30,10 +33,7 @@ export function TarjetaPartido({ t, p, alAbrir }: Props) {
         }
       }}
     >
-      <div className="mesa">
-        <b>{p.mesa || "–"}</b>
-        <i>MESA</i>
-      </div>
+      <div className="mesa">{numero ?? p.mesa ?? "–"}</div>
       <div className="quien">
         <div className="vs">
           <span className="a">{nom(p.aId)}</span>

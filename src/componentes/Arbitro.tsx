@@ -41,8 +41,8 @@ export function Arbitro({ t, mesa, alElegirMesa, alAbrir }: Props) {
         </div>
       </div>
 
-      {cola.map((p) => (
-        <TarjetaPartido key={p.id} t={t} p={p} alAbrir={alAbrir} />
+      {cola.map((p, i) => (
+        <TarjetaPartido key={p.id} t={t} p={p} alAbrir={alAbrir} numero={i + 1} />
       ))}
 
       {!cola.length && (

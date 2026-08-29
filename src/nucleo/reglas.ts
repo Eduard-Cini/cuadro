@@ -15,13 +15,16 @@ export const PUNTOS_SET = 11;
  *  - El set se gana con 11 puntos y dos de ventaja.
  *  - El saque cambia cada dos puntos; desde 10-10, cada punto.
  *  - En cada juego posterior saca primero quien recibió en el anterior.
+ *
+ * Quién abre el primer juego lo decide el sorteo del árbitro antes de
+ * empezar, y viaja en el propio partido.
  */
 export function reducir(p: Partido, setsPara: number, meta = PUNTOS_SET): EstadoPartido {
   const sets = { a: 0, b: 0 };
   let pa = 0;
   let pb = 0;
   let juego = 1;
-  let primero: Lado = "a";
+  let primero: Lado = p.primeroSaque ?? "a";
   const historial: Array<{ a: number; b: number }> = [];
   let finDeSet = false;
 

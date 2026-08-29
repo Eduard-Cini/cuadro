@@ -66,6 +66,16 @@ describe("saque", () => {
     expect(reducir(conPuntos(empate + "ab"), 3).saca).toBe("a");
   });
 
+  it("el sorteo del árbitro decide quién abre el primer juego", () => {
+    const p = conPuntos("");
+    expect(reducir(p, 3).saca).toBe("a");
+    p.primeroSaque = "b";
+    expect(reducir(p, 3).saca).toBe("b");
+    // y la alternancia cada dos puntos parte de ahí
+    p.eventos = "aa".split("").map((j) => ({ t: "punto" as const, j: j as Lado, ts: 0 }));
+    expect(reducir(p, 3).saca).toBe("a");
+  });
+
   it("en el juego siguiente saca quien recibió en el anterior", () => {
     const st = reducir(conPuntos("a".repeat(PUNTOS_SET)), 3);
     expect(st.juego).toBe(2);

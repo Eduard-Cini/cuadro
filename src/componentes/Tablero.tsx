@@ -12,9 +12,10 @@ interface Props {
   alPunto: (j: Lado) => void;
   alDeshacer: () => void;
   alSalir: () => void;
+  alPreparar: (cambio: { primeroSaque?: Lado; invertido?: boolean }) => void;
 }
 
-export function Tablero({ t, p, alPunto, alDeshacer, alSalir }: Props) {
+export function Tablero({ t, p, alPunto, alDeshacer, alSalir, alPreparar }: Props) {
   const setsPara = p.etapa === "final" ? t.formatoFinales : t.formatoGrupos;
   const st = reducir(p, setsPara);
 
@@ -24,7 +25,11 @@ export function Tablero({ t, p, alPunto, alDeshacer, alSalir }: Props) {
   const arbitro = t.arbitros.find((x) => x.mesa === p.mesa);
 
   const [golpe, setGolpe] = useState<{ lado: Lado; n: number; sfx: string } | null>(null);
-  const [volteado, setVolteado] = useState(false);
+  /* Antes del primer punto el partido está en preparación: el árbitro
+     ajusta lo que decidió el sorteo —quién saca— y acomoda los lados
+     para que la pantalla coincida con cómo quedaron los jugadores en
+     la mesa. Una vez que empieza, esos controles estorban. */
+  const preparando = p.eventos.length === 0;
   const [setsAvisados, setSetsAvisados] = useState(st.historial.length);
   const [finCerrado, setFinCerrado] = useState(false);
   const puntos = useRef(p.eventos.length);
@@ -104,7 +109,7 @@ export function Tablero({ t, p, alPunto, alDeshacer, alSalir }: Props) {
         </button>
       </div>
 
-      <div className="tb-campo" style={volteado ? { flexDirection: "row-reverse" } : undefined}>
+      <div className="tb-campo" style={p.invertido ? { flexDirection: "row-reverse" } : undefined}>
         {lado("a")}
         {lado("b")}
 
@@ -159,6 +164,29 @@ export function Tablero({ t, p, alPunto, alDeshacer, alSalir }: Props) {
         })()}
       </div>
 
+      {preparando ? (
+        <div className="tb-pie preparar">
+          <span className="prep-eti">Saca primero</span>
+          <div className="prep-op">
+            <button
+              className={(p.primeroSaque ?? "a") === "a" ? "bpie on a" : "bpie"}
+              onClick={() => alPreparar({ primeroSaque: "a" })}
+            >
+              {a?.nombre ?? "A"}
+            </button>
+            <button
+              className={p.primeroSaque === "b" ? "bpie on b" : "bpie"}
+              onClick={() => alPreparar({ primeroSaque: "b" })}
+            >
+              {b?.nombre ?? "B"}
+            </button>
+          </div>
+          <span className="sp" />
+          <button className="bpie" onClick={() => alPreparar({ invertido: !p.invertido })}>
+            Cambiar lado
+          </button>
+        </div>
+      ) : (
       <div className="tb-pie">
         <div className="sets">
           {st.historial.map((s, i) => (
@@ -172,13 +200,11 @@ export function Tablero({ t, p, alPunto, alDeshacer, alSalir }: Props) {
           {st.deuce && !st.terminado && <span className="vent">Ventaja</span>}
         </div>
         <span className="sp" />
-        <button className="bpie" onClick={() => setVolteado((v) => !v)}>
-          Cambiar lado
-        </button>
-        <button className="bpie rojo" onClick={alDeshacer} disabled={p.eventos.length === 0}>
+        <button className="bpie rojo" onClick={alDeshacer}>
           Deshacer
         </button>
       </div>
+      )}
     </div>
   );
 }

@@ -49,6 +49,16 @@ export default function App() {
     });
   };
 
+  /** Ajustes previos al primer punto: saque inicial y lado en pantalla. */
+  const preparar = (cambio: { primeroSaque?: Lado; invertido?: boolean }) => {
+    actualizar((d) => {
+      const p = d.partidos.find((x) => x.id === abierto);
+      if (!p) return;
+      if (cambio.primeroSaque !== undefined) p.primeroSaque = cambio.primeroSaque;
+      if (cambio.invertido !== undefined) p.invertido = cambio.invertido;
+    });
+  };
+
   const deshacer = () => {
     actualizar((d) => {
       const p = d.partidos.find((x) => x.id === abierto);
@@ -83,7 +93,14 @@ export default function App() {
     return (
       <>
         <Sprite />
-        <Tablero t={t} p={partido} alPunto={anotar} alDeshacer={deshacer} alSalir={cerrar} />
+        <Tablero
+          t={t}
+          p={partido}
+          alPunto={anotar}
+          alDeshacer={deshacer}
+          alSalir={cerrar}
+          alPreparar={preparar}
+        />
       </>
     );
   }

@@ -42,6 +42,10 @@ export interface Partido {
   bId: string | null;
   mesa: number;
   eventos: Evento[];
+  /** Quién saca en el primer juego. Lo decide el sorteo del árbitro. */
+  primeroSaque?: Lado;
+  /** Los lados aparecen cambiados para coincidir con la mesa real. */
+  invertido?: boolean;
 }
 
 /** Sets necesarios para ganar: 2 es al mejor de 3, 3 al mejor de 5. */
