@@ -827,7 +827,7 @@ input[type="file"] {
   font-weight: 400;
   position: absolute;
   left: 50%;
-  top: 24%;
+  top: 86%;
   z-index: 3;
   pointer-events: none;
   opacity: 0;
@@ -868,18 +868,28 @@ input[type="file"] {
 
 .pips {
   display: flex;
-  gap: 0.3rem;
-  margin-top: 0.3rem;
-  min-height: 1rem;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  min-height: 1.1rem;
+}
+.pips .eti {
+  font-family: var(--datos);
+  font-size: 0.95rem;
+  font-weight: 600;
+  opacity: 0.72;
+  margin-right: 0.1rem;
 }
 .pip {
   width: 0.85rem;
   height: 0.85rem;
   border: var(--linea-media) solid var(--papel);
   border-radius: 50%;
+  opacity: 0.4;
 }
 .pip.on {
   background: var(--papel);
+  opacity: 1;
 }
 .saque {
   display: flex;

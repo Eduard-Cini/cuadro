@@ -74,7 +74,11 @@ export function Tablero({ t, p, alPunto, alDeshacer, alSalir, alPreparar }: Prop
         <span className="pt num" key={`p${golpe?.lado === cual ? golpe.n : 0}`}>
           {pts}
         </span>
+        {/* Los círculos son los sets: llenos los ganados, vacíos los que
+            faltan para llevarse el partido. Sin la palabra al lado no se
+            entiende qué cuentan. */}
         <span className="pips">
+          <span className="eti">sets</span>
           {Array.from({ length: setsPara }, (_, i) => (
             <i key={i} className={i < sets ? "pip on" : "pip"} />
           ))}
