@@ -166,38 +166,21 @@ svg.ic {
 /* ---------------- secciones ---------------- */
 /* Sin caja: una regla gruesa arriba marca el corte. */
 .sec {
-  position: relative;
-  padding-top: 0.9rem;
-  margin-bottom: 2.4rem;
-}
-/* La regla de corte se dibuja aparte para poder entintarla.
-   El filtro nunca toca el texto. */
-.sec::before {
-  content: "";
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  /* El elemento es más alto que la línea a propósito: el filtro
-     desplaza el trazo y necesita margen, o lo recorta y lo parte. */
-  height: 11px;
-  background: linear-gradient(
-    to bottom,
-    transparent 0 2px,
-    var(--tinta) 2px calc(2px + var(--linea-marco)),
-    transparent calc(2px + var(--linea-marco))
-  );
-  filter: url(#rugoso);
+  border-top: var(--linea-marco) solid var(--tinta);
+  padding-top: 0.95rem;
+  margin-bottom: 2.6rem;
 }
 .tabs + .sec,
 .tabs + * > .sec:first-child {
   margin-top: 0;
 }
 .sec > h2 {
-  font-family: var(--display);
-  font-size: 1.28rem;
-  line-height: 1.1;
-  margin: 0 0 0.2rem;
+  font-family: var(--datos);
+  font-weight: 700;
+  letter-spacing: 0.005em;
+  font-size: 1.75rem;
+  line-height: 1.05;
+  margin: 0 0 0.25rem;
 }
 .sec > .sub {
   font-size: 0.9rem;
@@ -379,20 +362,13 @@ input[type="file"] {
   gap: 1.4rem;
 }
 .grupo {
-  position: relative;
+  border: var(--linea-media) solid var(--tinta);
   padding: 0.9rem 1rem 1rem;
 }
-.grupo::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border: var(--linea-marco) solid var(--tinta);
-  filter: url(#rugoso);
-  pointer-events: none;
-}
 .grupo > h3 {
-  font-family: var(--display);
-  font-size: 1.05rem;
+  font-family: var(--datos);
+  font-weight: 700;
+  font-size: 1.3rem;
   margin: 0 0 0.5rem;
 }
 .tab-pos {
@@ -587,8 +563,6 @@ input[type="file"] {
   font-size: clamp(2.4rem, 9vw, 3.6rem);
   max-width: 62rem;
   margin: 0 auto;
-  /* fuera de registro: la plancha de color corrida, como en papel barato */
-  text-shadow: -2px 1px 0 rgba(18, 86, 79, 0.75);
 }
 .sp-top p {
   max-width: 62rem;
@@ -646,7 +620,8 @@ input[type="file"] {
   height: 2.4rem;
 }
 .rol h3 {
-  font-family: var(--display);
+  font-family: var(--datos);
+  font-weight: 700;
   font-size: clamp(1.3rem, 3.4vw, 1.9rem);
   margin: 0;
   line-height: 1.05;
@@ -795,8 +770,9 @@ input[type="file"] {
 }
 
 .lado .jn {
-  font-family: var(--display);
-  font-size: clamp(0.95rem, 2.9vw, 1.65rem);
+  font-family: var(--datos);
+  font-weight: 700;
+  font-size: clamp(1.1rem, 3.4vw, 2rem);
   text-align: center;
   line-height: 1.08;
   max-width: 13ch;
@@ -829,6 +805,7 @@ input[type="file"] {
 }
 
 .sfx {
+  font-weight: 400;
   position: absolute;
   left: 50%;
   top: 24%;
@@ -865,6 +842,7 @@ input[type="file"] {
     transition: none !important;
   }
   .sfx {
+  font-weight: 400;
     opacity: 0;
   }
 }
@@ -1011,22 +989,15 @@ input[type="file"] {
   background: rgba(16, 21, 18, 0.9);
 }
 .aviso .caja {
-  position: relative;
   background: var(--papel);
+  border: var(--linea-marco) solid var(--tinta);
   padding: 1.6rem 1.8rem;
   max-width: 24rem;
 }
-.aviso .caja::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border: var(--linea-marco) solid var(--tinta);
-  filter: url(#rugoso);
-  pointer-events: none;
-}
 .aviso h3 {
-  font-family: var(--display);
-  font-size: 1.6rem;
+  font-family: var(--datos);
+  font-weight: 700;
+  font-size: 1.9rem;
   margin: 0 0 0.35rem;
   line-height: 1.05;
 }
@@ -1037,8 +1008,9 @@ input[type="file"] {
 }
 .aviso .gan {
   display: block;
-  font-family: var(--display);
-  font-size: 1.35rem;
+  font-family: var(--datos);
+  font-weight: 700;
+  font-size: 1.6rem;
   color: var(--rojo-2);
   margin-bottom: 0.15rem;
 }

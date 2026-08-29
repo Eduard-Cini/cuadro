@@ -9,13 +9,6 @@ export function Sprite() {
       <symbol id="bola" viewBox="0 0 16 16">
         <circle cx="8" cy="8" r="6.6" />
       </symbol>
-      {/* Tinta rugosa: desplaza el trazo con ruido para que las líneas
-          tengan el temblor de una plumilla, no el filo de un rectángulo
-          de CSS. Se aplica solo a los marcos, nunca al texto. */}
-      <filter id="rugoso" x="-6%" y="-6%" width="112%" height="112%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="3" seed="7" result="ruido" />
-        <feDisplacementMap in="SourceGraphic" in2="ruido" scale="3" xChannelSelector="R" yChannelSelector="G" />
-      </filter>
       <symbol id="mesa" viewBox="0 0 40 40">
         <rect x="2" y="12" width="36" height="4" />
         <rect x="19" y="6" width="2" height="8" />
