@@ -1,15 +1,26 @@
 import { partidoListo, reducir } from "./reglas";
 import type { Fila, Partido } from "./tipos";
 
-/** Tabla del grupo a partir de los partidos ya terminados. */
-export function estadisticas(ids: string[], partidos: Partido[], setsPara: number): Record<string, Fila> {
+/**
+ * Tabla del grupo a partir de los partidos que ya cuentan.
+ *
+ * `exigirValidacion` es la diferencia entre lo que pasó en la mesa y lo
+ * que el torneo da por oficial: con validación obligatoria, un resultado
+ * que el árbitro ya cerró no mueve la tabla hasta que el juez lo acepta.
+ */
+export function estadisticas(
+  ids: string[],
+  partidos: Partido[],
+  setsPara: number,
+  exigirValidacion = false,
+): Record<string, Fila> {
   const m: Record<string, Fila> = {};
   for (const id of ids) m[id] = { id, pj: 0, pg: 0, pp: 0, pts: 0, sg: 0, sp: 0, tg: 0, tp: 0 };
 
   for (const p of partidos) {
     if (!p.aId || !p.bId) continue;
     if (!m[p.aId] || !m[p.bId]) continue;
-    if (!partidoListo(p, setsPara)) continue;
+    if (!partidoListo(p, setsPara, exigirValidacion)) continue;
 
     const st = reducir(p, setsPara);
     const A = m[p.aId];
@@ -60,11 +71,11 @@ function bloques(ids: string[], valor: (id: string) => number): string[][] {
  * Si nada los separa, el reglamento manda sorteo y aquí se conserva el
  * orden actual para que el árbitro decida.
  */
-export function romper(ids: string[], todos: Partido[], setsPara: number): string[] {
+export function romper(ids: string[], todos: Partido[], setsPara: number, exigirValidacion = false): string[] {
   if (ids.length <= 1) return ids;
 
   const sub = todos.filter((p) => p.aId && p.bId && ids.includes(p.aId) && ids.includes(p.bId));
-  const m = estadisticas(ids, sub, setsPara);
+  const m = estadisticas(ids, sub, setsPara, exigirValidacion);
 
   const criterios: Array<(id: string) => number> = [
     (id) => m[id].pts,
@@ -76,7 +87,7 @@ export function romper(ids: string[], todos: Partido[], setsPara: number): strin
     const bs = bloques(ids, c);
     if (bs.length > 1) {
       const out: string[] = [];
-      for (const b of bs) out.push(...(b.length > 1 ? romper(b, todos, setsPara) : b));
+      for (const b of bs) out.push(...(b.length > 1 ? romper(b, todos, setsPara, exigirValidacion) : b));
       return out;
     }
   }
@@ -84,11 +95,11 @@ export function romper(ids: string[], todos: Partido[], setsPara: number): strin
 }
 
 /** Orden final del grupo: por puntos y, dentro de cada empate, por la cascada. */
-export function clasificar(ids: string[], todos: Partido[], setsPara: number): string[] {
-  const m = estadisticas(ids, todos, setsPara);
+export function clasificar(ids: string[], todos: Partido[], setsPara: number, exigirValidacion = false): string[] {
+  const m = estadisticas(ids, todos, setsPara, exigirValidacion);
   const out: string[] = [];
   for (const b of bloques(ids, (id) => m[id].pts)) {
-    out.push(...(b.length > 1 ? romper(b, todos, setsPara) : b));
+    out.push(...(b.length > 1 ? romper(b, todos, setsPara, exigirValidacion) : b));
   }
   return out;
 }

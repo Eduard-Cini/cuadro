@@ -346,6 +346,21 @@ input[type="file"] {
 .item .x:hover {
   color: var(--rojo);
 }
+.item .flechas {
+  display: inline-flex;
+  gap: 0.1rem;
+}
+.item .flechas .x {
+  margin-left: 0;
+  padding: 0.1rem 0.45rem;
+}
+.item .flechas .x:hover:not(:disabled) {
+  color: var(--tinta);
+}
+.item .flechas .x:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
 .vacio {
   font-size: 0.9rem;
   color: var(--tinta-3);
@@ -489,12 +504,21 @@ input[type="file"] {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.pj.fin {
+.pj.f-validado .mesa,
+.pj.f-validado .res {
   color: var(--tinta-3);
 }
-.pj.fin .mesa,
-.pj.fin .res {
-  color: var(--tinta-3);
+/* Con botones, la tarjeta gana una columna: si no, caen en una fila
+   nueva bajo la columna estrecha de la mesa y se salen del bloque. */
+.pj.con-acciones {
+  grid-template-columns: 2.7rem 1fr auto auto;
+}
+@media (max-width: 560px) {
+  .pj.con-acciones .acciones {
+    grid-column: 1 / -1;
+    padding-left: 0;
+    padding-top: 0.4rem;
+  }
 }
 
 /* ---------------- cuadro ---------------- */
@@ -576,7 +600,7 @@ input[type="file"] {
   display: flex;
   min-height: 0;
 }
-/* Dos mitades a sangre. La elección ocupa la página entera. */
+/* Franjas a sangre, una por rol. La elección ocupa la página entera. */
 .rol {
   flex: 1;
   border: none;
@@ -1091,5 +1115,2237 @@ input[type="file"] {
   }
   .lado .pt {
     font-size: clamp(3.6rem, 17vh, 7rem);
+  }
+}
+
+/* ============================================================
+   AMPLIACIÓN — validación, mesas, red y pantalla
+
+   Mismas reglas del sistema: el grosor de línea es jerarquía, no hay
+   sombras, y la trama solo donde hay masa de color.
+   ============================================================ */
+
+/* ---------------- estado de la conexión ---------------- */
+/* Un punto de color en la banda. Tiene que verse de reojo, sin leerlo. */
+.enlace {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--datos);
+  font-size: 0.86rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.9;
+  margin-right: 0.7rem;
+}
+.enlace i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--tinta-3);
+  flex: none;
+}
+.enlace.conectado i {
+  background: #4faa3a;
+}
+.enlace.conectando i {
+  background: var(--mostaza);
+  animation: latido 1s steps(2) infinite;
+}
+.enlace.caido i {
+  background: var(--rojo);
+}
+@keyframes latido {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.estado-red {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  border: var(--linea-media) solid var(--tinta);
+  padding: 0.6rem 0.8rem;
+  margin: 0.9rem 0;
+  background: var(--papel-2);
+  font-size: 0.94rem;
+}
+.estado-red i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--tinta-3);
+  flex: none;
+}
+.estado-red.conectado i {
+  background: #4faa3a;
+}
+.estado-red.caido i {
+  background: var(--rojo);
+}
+.estado-red.caido {
+  border-color: var(--rojo);
+}
+.estado-red span {
+  font-family: var(--datos);
+  color: var(--tinta-2);
+}
+.estado-red .mal {
+  color: var(--rojo-2);
+}
+
+/* ---------------- piezas menudas ---------------- */
+.sec.compacta {
+  padding-bottom: 0.35rem;
+  border-bottom: none;
+}
+.sub-titulo {
+  font-family: var(--display);
+  font-size: 1rem;
+  margin: 0.2rem 0 0.3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.fila.entre {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.fila.centrada {
+  justify-content: center;
+}
+.cuenta {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.3rem;
+  background: var(--rojo);
+  color: var(--papel);
+  font-family: var(--datos);
+  font-size: 0.85rem;
+  border-radius: 999px;
+}
+.btn.chico {
+  padding: 0.32rem 0.7rem;
+  font-size: 0.85rem;
+}
+.btn.grande {
+  padding: 0.9rem 2.2rem;
+  font-size: 1.15rem;
+}
+
+label.check {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  margin-top: 1rem;
+  cursor: pointer;
+}
+label.check input {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.15rem;
+  accent-color: var(--rojo);
+  flex: none;
+}
+label.check b {
+  display: block;
+}
+label.check em {
+  display: block;
+  font-style: normal;
+  color: var(--tinta-2);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+details.ayuda {
+  margin-top: 1rem;
+  border-top: var(--linea-fina) solid var(--tinta-3);
+  padding-top: 0.7rem;
+}
+details.ayuda summary {
+  cursor: pointer;
+  font-family: var(--datos);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--tinta-2);
+}
+details.ayuda ol,
+details.ayuda ul {
+  margin: 0.7rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.94rem;
+  color: var(--tinta-2);
+}
+details.ayuda li {
+  margin-bottom: 0.35rem;
+}
+details.ayuda code {
+  background: var(--papel-3);
+  padding: 0.05rem 0.3rem;
+  font-size: 0.9em;
+}
+.acta li {
+  font-family: var(--datos);
+  font-size: 1rem;
+}
+
+/* ---------------- sellos de estado en las tarjetas ---------------- */
+.sello {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.45rem;
+  font-family: var(--datos);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: var(--linea-fina) solid var(--tinta-3);
+  color: var(--tinta-2);
+}
+.sello.en-juego {
+  border-color: var(--rojo);
+  color: var(--papel);
+  background: var(--rojo);
+}
+.sello.descanso {
+  border-color: var(--mostaza);
+  color: var(--tinta);
+  background: var(--mostaza);
+}
+.sello.por-validar {
+  border-color: var(--azul);
+  color: var(--papel);
+  background: var(--azul);
+}
+.sello.validado {
+  border-color: var(--tinta);
+  color: var(--tinta);
+}
+.sello.corregido {
+  border-style: dashed;
+  border-color: var(--rojo-2);
+  color: var(--rojo-2);
+}
+.pj.f-validado {
+  opacity: 0.72;
+}
+.pj.f-por-validar {
+  border-left: var(--linea-marco) solid var(--azul);
+}
+.pj.f-en-juego {
+  border-left: var(--linea-marco) solid var(--rojo);
+}
+.pj .vs .gana {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.pj .acciones {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding-left: 0.6rem;
+  flex-wrap: wrap;
+}
+
+/* ---------------- corrector de resultados ---------------- */
+/* Se abre debajo de la tarjeta, dentro del mismo bloque, para que quede
+   claro qué partido se está tocando. */
+.corrector {
+  border: var(--linea-media) solid var(--tinta);
+  border-top: none;
+  background: var(--papel-2);
+  padding: 0.9rem 1rem 1rem;
+  margin-bottom: 0.6rem;
+}
+.parciales-edit {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.8rem 0;
+  max-width: 26rem;
+}
+.parciales-edit .cabecera,
+.parciales-edit .renglon {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr 1fr;
+  gap: 0.5rem;
+  align-items: center;
+}
+.parciales-edit .cabecera span {
+  font-family: var(--datos);
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  color: var(--tinta-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.parciales-edit .renglon > span {
+  font-family: var(--datos);
+  color: var(--tinta-2);
+}
+.parciales-edit input {
+  width: 100%;
+  text-align: center;
+  font-family: var(--datos);
+  font-size: 1.25rem;
+}
+.detalle-sets {
+  margin: -0.35rem 0 0.7rem;
+  padding: 0.3rem 0.9rem 0.55rem;
+  font-family: var(--datos);
+  font-size: 0.95rem;
+  color: var(--tinta-2);
+  border-left: var(--linea-fina) solid var(--tinta-3);
+}
+.detalle-sets.aviso-corr {
+  color: var(--rojo-2);
+  border-left-color: var(--rojo-2);
+}
+
+/* ---------------- mesas ---------------- */
+.mesas-foto {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.6rem;
+  padding: 0 1rem 1rem;
+}
+.mcard {
+  display: flex;
+  gap: 0.7rem;
+  align-items: stretch;
+  border: var(--linea-marco) solid var(--tinta);
+  background: var(--papel-2);
+  min-height: 4.6rem;
+}
+.mcard.ocupada {
+  cursor: pointer;
+  background: var(--papel);
+}
+.mcard.ocupada.en-juego {
+  border-color: var(--rojo);
+}
+.mcard.ocupada.descanso {
+  border-color: var(--mostaza);
+}
+.mcard .mnum {
+  width: 3rem;
+  display: grid;
+  place-items: center;
+  background: var(--tinta);
+  color: var(--papel);
+  font-family: var(--display);
+  font-size: 1.6rem;
+  flex: none;
+}
+.mcard.ocupada.en-juego .mnum {
+  background: var(--rojo);
+}
+.mcard .mcuerpo {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.5rem 0.6rem 0.5rem 0;
+  min-width: 0;
+}
+.mcard .mcuerpo b {
+  font-size: 0.98rem;
+  line-height: 1.25;
+}
+.mcard .mcuerpo b.libre {
+  font-family: var(--datos);
+  text-transform: uppercase;
+  color: var(--tinta-3);
+  letter-spacing: 0.06em;
+}
+.mcard .mcuerpo span {
+  font-family: var(--datos);
+  font-size: 0.95rem;
+  color: var(--tinta-2);
+}
+.mcard .marb {
+  font-size: 0.85rem;
+  color: var(--tinta-3);
+}
+.mcard .mcuerpo .macciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+  font-family: inherit;
+}
+
+/* ---------------- propuesta de asignación ---------------- */
+/* Cada renglón lleva su motivo: el juez acepta viendo el porqué. */
+.propuesta {
+  list-style: none;
+  margin: 0.8rem 0;
+  padding: 0;
+  border-top: var(--linea-fina) solid var(--tinta-3);
+}
+.propuesta li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  border-bottom: var(--linea-fina) solid var(--tinta-3);
+}
+.propuesta .pmesa {
+  width: 2.4rem;
+  height: 2.4rem;
+  display: grid;
+  place-items: center;
+  background: var(--tinta);
+  color: var(--papel);
+  font-family: var(--display);
+  font-size: 1.15rem;
+  flex: none;
+}
+.propuesta .pquien {
+  flex: 1;
+  min-width: 0;
+}
+.propuesta .pquien b {
+  display: block;
+  line-height: 1.3;
+}
+.propuesta .pquien em {
+  font-style: normal;
+  font-family: var(--datos);
+  font-size: 0.9rem;
+  color: var(--tinta-2);
+}
+.espera {
+  list-style: none;
+  padding: 0;
+}
+.espera li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.25rem 0;
+  border-bottom: var(--linea-fina) solid var(--papel-3);
+  font-size: 0.92rem;
+}
+.espera em {
+  font-style: normal;
+  font-family: var(--datos);
+  color: var(--tinta-3);
+  white-space: nowrap;
+}
+
+.tab-agenda {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.7rem;
+  font-family: var(--datos);
+  font-size: 1.02rem;
+}
+.tab-agenda th {
+  text-align: left;
+  text-transform: uppercase;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  color: var(--tinta-2);
+  border-bottom: var(--linea-media) solid var(--tinta);
+  padding: 0.3rem 0.4rem;
+}
+.tab-agenda td {
+  padding: 0.32rem 0.4rem;
+  border-bottom: var(--linea-fina) solid var(--papel-3);
+}
+.tab-agenda .der,
+.pt-tabla .der {
+  text-align: right;
+}
+.tab-agenda tr.jugando td {
+  background: var(--papel-3);
+  font-weight: 700;
+}
+.tab-agenda td.pulsa {
+  cursor: pointer;
+}
+.tab-agenda i,
+.pt-tabla i {
+  font-style: normal;
+  color: var(--tinta-3);
+}
+
+/* ---------------- identificarse ---------------- */
+.lista.elegible {
+  border-top: var(--linea-fina) solid var(--tinta-3);
+}
+.item.boton {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: var(--linea-fina) solid var(--tinta-3);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+.item.boton:hover {
+  background: var(--papel-2);
+}
+.pinbox {
+  width: min(22rem, 90vw);
+  margin: 0 auto;
+}
+.rol.p {
+  background: var(--tinta);
+}
+
+/* ---------------- descanso entre sets ---------------- */
+/* El aviso ocupa la pantalla entera a propósito: mientras dura, el
+   tablero no acepta puntos y no debe parecer que el set ya empezó. */
+.aviso.descanso .caja {
+  border-color: var(--mostaza);
+}
+.aviso .marcasets {
+  font-family: var(--display);
+  font-size: clamp(1.6rem, 5vw, 2.6rem);
+  margin: 0.2rem 0 0.4rem;
+}
+.crono {
+  font-family: var(--datos);
+  font-size: clamp(3rem, 12vw, 6rem);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  margin: 0.6rem 0;
+  font-variant-numeric: tabular-nums;
+}
+.crono.fuera {
+  font-size: clamp(1.1rem, 3.5vw, 1.6rem);
+  color: var(--rojo);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.quien-saca {
+  font-family: var(--datos);
+  font-size: 1.15rem;
+  color: var(--tinta-2);
+}
+.quien-saca b {
+  color: var(--tinta);
+}
+.sets-fin {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  font-family: var(--datos);
+  font-size: 1.4rem;
+  color: var(--tinta-2);
+}
+
+/* ============================================================
+   PANTALLA DEL GIMNASIO
+
+   Se lee a seis metros, en un gimnasio con luz de tubo. Invierte el
+   sistema: tinta de fondo y papel encima, que es lo que aguanta el
+   reflejo. Nada es pulsable; se abre y se deja puesta.
+   ============================================================ */
+/* Altura fija y sin barra: nadie va a desplazar la pantalla de la pared,
+   así que lo que no cabe se recorta y el pie se queda a la vista. */
+.pantalla {
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--tinta);
+  color: var(--papel);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1rem 1.2rem 1.2rem;
+  font-size: clamp(15px, 1.15vw, 22px);
+}
+.pt-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  border-bottom: var(--linea-marco) solid var(--papel);
+  padding-bottom: 0.5rem;
+}
+.pt-top h1 {
+  font-family: var(--display);
+  font-size: clamp(1.5rem, 3.2vw, 2.6rem);
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+.pt-meta {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  font-family: var(--datos);
+  font-size: clamp(0.95rem, 1.5vw, 1.3rem);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--papel-3);
+}
+.pt-salir {
+  background: none;
+  border: var(--linea-fina) solid var(--tinta-3);
+  color: var(--tinta-3);
+  cursor: pointer;
+  padding: 0.1rem 0.5rem;
+  font: inherit;
+}
+
+/* ---------- lo que se juega ahora ---------- */
+.pt-ahora {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.7rem;
+}
+.pt-mesa {
+  border: var(--linea-media) solid var(--tinta-3);
+  padding: 0.6rem 0.8rem 0.7rem;
+  min-height: 7rem;
+  display: flex;
+  flex-direction: column;
+}
+.pt-mesa.viva {
+  border-color: var(--papel);
+  border-width: var(--linea-marco);
+}
+.pt-mesa.viva.en-juego {
+  border-color: var(--rojo);
+}
+.pt-mesa.viva.descanso {
+  border-color: var(--mostaza);
+}
+.pt-num {
+  font-family: var(--datos);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--papel-3);
+  font-size: clamp(0.85rem, 1.3vw, 1.1rem);
+}
+.pt-mesa.viva.en-juego .pt-num {
+  color: var(--rojo);
+}
+.pt-vs {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+}
+.pt-vs .j {
+  min-width: 0;
+}
+.pt-vs .j b {
+  display: block;
+  font-size: clamp(1rem, 1.7vw, 1.5rem);
+  line-height: 1.15;
+}
+.pt-vs .j span {
+  font-family: var(--datos);
+  font-size: 0.85em;
+  color: var(--tinta-3);
+}
+.pt-vs .j.gana b {
+  color: var(--mostaza);
+}
+.pt-vs .j:last-child {
+  text-align: right;
+}
+.pt-marca {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.pt-marca .sets {
+  display: block;
+  font-family: var(--display);
+  font-size: clamp(1.6rem, 3.4vw, 3rem);
+  line-height: 1;
+}
+.pt-marca .pts {
+  display: block;
+  font-family: var(--datos);
+  font-size: clamp(0.9rem, 1.6vw, 1.3rem);
+  color: var(--papel-3);
+  letter-spacing: 0.04em;
+}
+.pt-arb,
+.pt-libre {
+  font-family: var(--datos);
+  color: var(--tinta-3);
+  font-size: 0.9em;
+}
+.pt-libre {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+/* ---------- las dos listas ---------- */
+.pt-cols {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 1.4rem;
+  flex: 1;
+  min-height: 0;
+}
+@media (max-width: 900px) {
+  .pt-cols {
+    grid-template-columns: 1fr;
+  }
+}
+.pt-lista {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.pt-caja {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+/* Mientras se juega, las listas están recortadas a lo que cabe y sobra
+   con eso. Acabado el torneo son la jornada entera, y en una pantalla
+   chica no caben: se deja desplazar, con lo más reciente arriba, de modo
+   que la final se ve siempre aunque nadie toque nada. */
+.pt-caja.desliza {
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.pt-lista h2 {
+  font-family: var(--display);
+  font-size: clamp(1.1rem, 2vw, 1.7rem);
+  margin: 0 0 0.5rem;
+  border-bottom: var(--linea-media) solid var(--papel-3);
+  padding-bottom: 0.25rem;
+}
+.pt-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: clamp(0.95rem, 1.45vw, 1.35rem);
+}
+.pt-tabla th {
+  text-align: left;
+  font-family: var(--datos);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-size: 0.75em;
+  color: var(--tinta-3);
+  padding: 0.15rem 0.4rem;
+}
+.pt-tabla td {
+  padding: 0.34rem 0.4rem;
+  border-bottom: var(--linea-fina) solid #2a312c;
+  vertical-align: baseline;
+}
+.pt-tabla td.mesa {
+  font-family: var(--display);
+  width: 2.6rem;
+  color: var(--papel-3);
+}
+.pt-tabla .vs {
+  font-family: var(--datos);
+  color: var(--tinta-3);
+  padding: 0 0.3rem;
+}
+.pt-tabla .tiempo {
+  font-family: var(--datos);
+  white-space: nowrap;
+  color: var(--papel-2);
+}
+.pt-tabla tr.pronto td {
+  background: var(--rojo);
+  color: var(--papel);
+}
+.pt-tabla tr.pronto .vs,
+.pt-tabla tr.pronto td.mesa,
+.pt-tabla tr.pronto .tiempo {
+  color: var(--papel);
+}
+.pt-etapa {
+  margin-left: 0.5rem;
+  font-family: var(--datos);
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: var(--linea-fina) solid var(--mostaza);
+  color: var(--mostaza);
+  padding: 0 0.35rem;
+}
+.pt-tabla.resultados .marcador {
+  font-family: var(--display);
+  font-size: 1.1em;
+}
+.pt-tabla.resultados b.gana {
+  color: var(--mostaza);
+}
+.parciales {
+  display: block;
+  font-family: var(--datos);
+  font-size: 0.82em;
+  color: var(--tinta-3);
+}
+.parciales span + span::before {
+  content: " · ";
+}
+.pt-pie,
+.pt-vacio {
+  font-family: var(--datos);
+  color: var(--tinta-3);
+  font-size: 0.92em;
+  margin: 0.6rem 0 0;
+}
+
+/* Llamado a la mesa: la línea que un jugador lee de pasada. */
+.pt-llamado {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  background: var(--rojo);
+  color: var(--papel);
+  padding: 0.6rem 1rem;
+  margin: 0 -1.2rem -1.2rem;
+  font-size: clamp(1rem, 1.8vw, 1.5rem);
+}
+.pt-llamado span {
+  font-family: var(--datos);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.85;
+}
+
+/* ---------------- alta y credenciales ---------------- */
+/* El código se teclea una vez y con prisa: grande, espaciado y en
+   mayúsculas, para que se lea desde el otro lado de la mesa. */
+input.codigo {
+  font-family: var(--datos);
+  font-size: 1.6rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+}
+.codigo-alta {
+  font-family: var(--datos);
+  font-size: 1.15rem;
+  letter-spacing: 0.2em;
+  background: var(--tinta);
+  color: var(--papel);
+  padding: 0.1rem 0.5rem;
+  margin-right: 0.5rem;
+}
+.credencial {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  border: var(--linea-media) solid var(--tinta);
+  background: var(--papel-2);
+  padding: 0.7rem 0.9rem;
+  margin: 0.9rem 0;
+}
+.credencial > div {
+  flex: 1;
+  min-width: 12rem;
+}
+.credencial .eti {
+  display: block;
+  font-family: var(--datos);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-size: 0.78rem;
+  color: var(--tinta-3);
+}
+.credencial b {
+  font-size: 1.1rem;
+}
+.credencial .met {
+  display: block;
+  font-family: var(--datos);
+  font-size: 0.9rem;
+  color: var(--tinta-2);
+}
+.alta {
+  margin: 0.4rem 0 0.9rem;
+}
+.estado-red.sin-credencial {
+  border-color: var(--mostaza);
+}
+.estado-red.sin-credencial i,
+.enlace.sin-credencial i {
+  background: var(--mostaza);
+}
+.idx.papel {
+  font-size: 1rem;
+}
+.idx.papel.juez {
+  background: var(--rojo);
+  color: var(--papel);
+}
+.idx.papel.arbitro {
+  background: var(--azul);
+  color: var(--papel);
+}
+
+/* ---------------- repartir la aplicación ---------------- */
+/* Se proyecta en la pared mientras llegan los árbitros: los códigos
+   tienen que leerse de lejos y escanearse desde metro y medio. */
+.repartir {
+  min-height: 100dvh;
+  padding: 1.4rem clamp(1rem, 4vw, 3rem) 2.5rem;
+  max-width: 68rem;
+  margin: 0 auto;
+}
+.rp-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  border-bottom: var(--linea-marco) solid var(--tinta);
+  padding-bottom: 0.8rem;
+  margin-bottom: 1.6rem;
+}
+.rp-top .marca {
+  color: var(--tinta);
+  margin: 0;
+}
+.rp-top .marca em {
+  color: var(--rojo);
+}
+.rp-top .lema {
+  margin: 0.1rem 0 0;
+  font-family: var(--datos);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--tinta-2);
+}
+.rp-principal {
+  display: flex;
+  gap: clamp(1.2rem, 4vw, 2.6rem);
+  align-items: center;
+  flex-wrap: wrap;
+  border: var(--linea-marco) solid var(--tinta);
+  padding: clamp(1rem, 3vw, 1.8rem);
+  margin-bottom: 1.8rem;
+}
+.rp-texto {
+  flex: 1;
+  min-width: 15rem;
+}
+.rp-texto h2 {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  margin: 0 0 0.5rem;
+}
+.rp-texto p {
+  margin: 0 0 0.5rem;
+}
+.rp-url {
+  font-family: var(--datos);
+  font-size: clamp(1.3rem, 3.5vw, 2.1rem);
+  letter-spacing: 0.02em;
+  background: var(--tinta);
+  color: var(--papel);
+  padding: 0.25rem 0.7rem;
+  display: inline-block;
+  overflow-wrap: anywhere;
+}
+.rp-nota {
+  border-left: var(--linea-marco) solid var(--mostaza);
+  padding-left: 1rem;
+}
+.rp-nota h2 {
+  font-family: var(--display);
+  font-size: 1.2rem;
+  margin: 0 0 0.4rem;
+}
+.rp-arbitros {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.rp-arb {
+  border: var(--linea-media) solid var(--tinta);
+  padding: 0.7rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.rp-quien b {
+  display: block;
+  line-height: 1.2;
+}
+.rp-quien span {
+  font-family: var(--datos);
+  font-size: 0.88rem;
+  color: var(--tinta-3);
+}
+.rp-codigo {
+  font-family: var(--datos);
+  font-size: 1.5rem;
+  letter-spacing: 0.28em;
+  background: var(--tinta);
+  color: var(--papel);
+  padding: 0.1rem 0 0.1rem 0.28em;
+  width: 100%;
+}
+svg.qr {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: var(--linea-fina) solid var(--papel-3);
+}
+.nota.flotante {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: 0 0 0.8rem;
+}
+
+/* ---------------- guía del torneo ---------------- */
+/* Va arriba del todo y en tinta: es lo primero que se lee al abrir, y
+   tiene que distinguirse de las secciones que solo esperan datos. */
+.guia {
+  background: var(--tinta);
+  color: var(--papel);
+  padding: 0.9rem 1rem 1rem;
+  margin: 0 0 0.2rem;
+}
+.guia-cab {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+.guia-num {
+  font-family: var(--datos);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-size: 0.82rem;
+  color: var(--papel-3);
+}
+.guia-puntos {
+  display: flex;
+  gap: 0.28rem;
+}
+.guia-puntos i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid var(--tinta-3);
+}
+.guia-puntos i.on {
+  background: var(--papel-3);
+  border-color: var(--papel-3);
+}
+.guia-puntos i.aqui {
+  background: var(--rojo);
+  border-color: var(--rojo);
+  transform: scale(1.35);
+}
+.guia .sp {
+  flex: 1;
+}
+.guia-titulo {
+  font-family: var(--display);
+  font-size: clamp(1.15rem, 3.4vw, 1.5rem);
+  margin: 0 0 0.3rem;
+  color: var(--papel);
+}
+.guia-que {
+  margin: 0 0 0.5rem;
+  max-width: 46rem;
+  line-height: 1.5;
+}
+.guia-detalle {
+  margin: -0.25rem 0 0.6rem;
+  font-family: var(--datos);
+  font-size: 0.95rem;
+  color: var(--mostaza);
+}
+.guia-porque {
+  border-left: var(--linea-marco) solid var(--mostaza);
+  padding: 0.1rem 0 0.1rem 0.8rem;
+  margin: 0 0 0.8rem;
+  max-width: 46rem;
+}
+.guia-porque b {
+  font-family: var(--datos);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  color: var(--mostaza);
+}
+.guia-porque p {
+  margin: 0.15rem 0 0;
+  color: var(--papel-2);
+  line-height: 1.5;
+  font-size: 0.96rem;
+}
+.guia .btn {
+  background: var(--papel);
+  color: var(--tinta);
+  border-color: var(--papel);
+}
+.guia .btn:hover {
+  background: var(--mostaza);
+  border-color: var(--mostaza);
+}
+.guia .btn.leve {
+  background: none;
+  color: var(--papel);
+  border-color: var(--tinta-3);
+}
+.guia .btn.leve:hover {
+  background: none;
+  border-color: var(--papel);
+}
+.interruptor {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  font-family: var(--datos);
+  font-size: 0.9rem;
+  color: var(--papel-3);
+}
+.interruptor input {
+  accent-color: var(--rojo);
+  width: 1.05rem;
+  height: 1.05rem;
+}
+.guia-todos {
+  list-style: none;
+  counter-reset: paso;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  border-top: var(--linea-fina) solid var(--tinta-3);
+}
+.guia-todos li {
+  counter-increment: paso;
+  border-bottom: var(--linea-fina) solid var(--tinta-3);
+}
+.enlace-paso {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  background: none;
+  border: none;
+  color: var(--papel-3);
+  font: inherit;
+  text-align: left;
+  padding: 0.5rem 0;
+  cursor: pointer;
+}
+.enlace-paso::before {
+  content: counter(paso);
+  font-family: var(--datos);
+  color: var(--tinta-3);
+  min-width: 1.1rem;
+}
+.enlace-paso b {
+  flex: 1;
+}
+.enlace-paso span {
+  font-family: var(--datos);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.enlace-paso:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.guia-todos li.hecho .enlace-paso b {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+.guia-todos li.actual .enlace-paso {
+  color: var(--papel);
+}
+.guia-todos li.actual .enlace-paso span {
+  color: var(--rojo);
+}
+.guia-mini {
+  margin: -0.2rem 0 0.7rem 1.8rem;
+  color: var(--papel-2);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  max-width: 44rem;
+}
+.guia.lista {
+  background: var(--papel-2);
+  color: var(--tinta);
+  border-bottom: var(--linea-marco) solid var(--tinta);
+}
+.guia.lista .guia-num {
+  color: var(--tinta-2);
+}
+.guia.lista .interruptor {
+  color: var(--tinta-2);
+}
+.guia.lista .btn {
+  background: var(--tinta);
+  color: var(--papel);
+  border-color: var(--tinta);
+}
+.guia.lista .btn.leve {
+  background: none;
+  color: var(--tinta);
+}
+
+/* ---------------- resumen de la configuración ---------------- */
+.resumen {
+  list-style: none;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  border-top: var(--linea-fina) solid var(--tinta-3);
+}
+.resumen li {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  padding: 0.35rem 0;
+  border-bottom: var(--linea-fina) solid var(--papel-3);
+}
+.resumen li span {
+  font-family: var(--datos);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.82rem;
+  color: var(--tinta-3);
+  min-width: 7rem;
+}
+
+/* ---------------- ritmo medido ---------------- */
+/* De aquí salen los minutos de la proyección. Enseñarlo evita que el juez
+   se fíe de un número sin saber de dónde viene. */
+.ritmo {
+  border-left: var(--linea-marco) solid var(--mostaza);
+  padding: 0.35rem 0 0.35rem 0.8rem;
+  margin: 0.9rem 0;
+}
+.ritmo b {
+  display: block;
+  font-family: var(--datos);
+  font-size: 1.05rem;
+}
+.ritmo span {
+  font-size: 0.9rem;
+  color: var(--tinta-2);
+}
+
+/* ---------------- propuesta con alternativas ---------------- */
+.propuestas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 0.9rem;
+  margin: 0.9rem 0;
+}
+.ppuesta {
+  border: var(--linea-media) solid var(--tinta);
+}
+.pp-cab {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--tinta);
+  color: var(--papel);
+  padding: 0.3rem 0.5rem;
+}
+.pp-cab .pmesa {
+  width: 1.8rem;
+  height: 1.8rem;
+  display: grid;
+  place-items: center;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--display);
+  font-size: 1.05rem;
+  flex: none;
+}
+.pp-arb {
+  font-family: var(--datos);
+  font-size: 0.88rem;
+  color: var(--papel-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pp-opcion {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-top: var(--linea-fina) solid var(--papel-3);
+  font: inherit;
+  color: inherit;
+  padding: 0.45rem 0.6rem;
+  cursor: pointer;
+  position: relative;
+}
+.ppuesta .pp-opcion:first-of-type {
+  border-top: none;
+}
+.pp-opcion:hover {
+  background: var(--papel-2);
+}
+.pp-opcion b {
+  display: block;
+  line-height: 1.25;
+  font-size: 0.95rem;
+}
+.pp-opcion em {
+  font-style: normal;
+  font-family: var(--datos);
+  font-size: 0.85rem;
+  color: var(--tinta-3);
+}
+/* Lo propuesto se distingue, pero las alternativas se pulsan igual: la
+   decisión es del juez y ninguna opción está escondida tras un menú. */
+.pp-opcion.elegida {
+  background: var(--papel-2);
+  border-left: var(--linea-marco) solid var(--rojo);
+}
+.pp-marca {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.6rem;
+  font-family: var(--datos);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--rojo);
+}
+.pp-vacio {
+  margin: 0;
+  padding: 0.5rem 0.6rem;
+  border-top: var(--linea-fina) solid var(--papel-3);
+  font-size: 0.88rem;
+  color: var(--tinta-3);
+}
+
+/* ---------------- entrar sin código, desde la propia máquina ---------------- */
+/* Va sobre las tres franjas de papel, antes de elegir papel: en la
+   computadora del torneo no hay nada que decidir ni que teclear. */
+.sp-local {
+  background: var(--mostaza);
+  color: var(--tinta);
+  padding: 0.9rem 1rem 1rem;
+  text-align: center;
+}
+.sp-local p {
+  margin: 0 0 0.6rem;
+  font-family: var(--datos);
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.sp-local .btn {
+  background: var(--tinta);
+  color: var(--papel);
+  border-color: var(--tinta);
+}
+.sp-local span {
+  display: block;
+  margin-top: 0.55rem;
+  font-size: 0.88rem;
+  color: var(--tinta-2);
+}
+
+/* La versión, discreta pero siempre visible: es lo primero que hay que
+   comparar cuando dos aparatos se comportan distinto. */
+.version {
+  font-family: var(--datos);
+  font-size: 0.8rem;
+  color: var(--tinta-3);
+  letter-spacing: 0.04em;
+  margin-right: 0.7rem;
+}
+
+/* ============================================================
+   ETIQUETAS DE FASE
+
+   Un partido sin fase es un dato huérfano: «Ramírez vs Solís» no le
+   dice nada a nadie hasta que dice si es un partido de grupo o la
+   semifinal. La etiqueta va con el mismo tratamiento en todas las
+   vistas para que se reconozca sin leerla.
+   ============================================================ */
+.etapa,
+.mfase,
+.mcard .mcuerpo .mfase {
+  display: inline-block;
+  font-family: var(--datos);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+  padding: 0 0.4rem;
+  border: var(--linea-fina) solid var(--tinta-3);
+  color: var(--tinta-2);
+  white-space: nowrap;
+}
+/* En la tarjeta de mesa hay una regla de `span` más específica que esta:
+   la etiqueta se nombra con el mismo peso para que no la pise. */
+.mfase,
+.mcard .mcuerpo .mfase {
+  border-color: var(--azul);
+  color: var(--azul-2);
+}
+/* La tarjeta apila en columna, así que la etiqueta se estiraría a todo el
+   ancho: se la deja del tamaño de su texto. */
+.mcard .mcuerpo .mfase {
+  align-self: flex-start;
+  margin: 0.15rem 0;
+}
+
+/* ---------------- semilla del sorteo ---------------- */
+/* Lo que hay que poder decir en voz alta si alguien reclama el sorteo:
+   con este número, el reparto se vuelve a hacer igual delante de él. */
+.semilla {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  border-left: var(--linea-marco) solid var(--mostaza);
+  background: rgba(201, 138, 16, 0.09);
+  padding: 0.55rem 0.8rem;
+  margin: 0.9rem 0 0;
+}
+.semilla .eti {
+  font-family: var(--datos);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--tinta-3);
+}
+.semilla b {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+.semilla .pie {
+  margin: 0;
+  flex: 1 1 14rem;
+  font-size: 0.9rem;
+  color: var(--tinta-2);
+}
+
+/* ============================================================
+   CUADRO DIBUJADO
+
+   El cuadro de papel se lee por el trazo: la vista sigue la línea del
+   ganador hasta la final. Las columnas sueltas no hacen eso, así que
+   las llaves se centran por pares y el trazo las une.
+   ============================================================ */
+.rondas {
+  align-items: stretch;
+}
+.ronda {
+  display: flex;
+  flex-direction: column;
+}
+.llaves {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+}
+.ranura {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  position: relative;
+  min-height: 4rem;
+}
+.ranura .llave {
+  flex: 1;
+  margin: 0;
+}
+/* Salida hacia la ronda siguiente y entrada desde la anterior: entre las
+   dos cubren el hueco entero, y la línea queda continua de una llave a la
+   que sale de ella. */
+.ranura:not(.ultima)::after {
+  content: "";
+  position: absolute;
+  right: -0.8rem;
+  top: 50%;
+  width: 0.8rem;
+  border-top: var(--linea-media) solid var(--tinta);
+}
+.ranura.entra .llave::before {
+  content: "";
+  position: absolute;
+  left: -0.8rem;
+  top: 50%;
+  width: 0.8rem;
+  border-top: var(--linea-media) solid var(--tinta);
+}
+.ranura .llave {
+  position: relative;
+}
+/* La vertical que junta las dos llaves de un par. Cada una pone su
+   mitad: la de arriba baja, la de abajo sube, y se encuentran justo a
+   la altura del partido que sale de ellas. */
+.ranura:not(.ultima)::before {
+  content: "";
+  position: absolute;
+  right: -0.8rem;
+  height: 50%;
+  border-right: var(--linea-media) solid var(--tinta);
+}
+.ranura:nth-child(odd)::before {
+  top: 50%;
+}
+.ranura:nth-child(even)::before {
+  bottom: 50%;
+}
+/* Una llave impar sin pareja no cierra nada: no lleva vertical. */
+.ranura:nth-child(odd):last-child::before {
+  display: none;
+}
+.llave.cerrada {
+  border-left-color: var(--azul);
+  background: rgba(27, 90, 148, 0.07);
+}
+.llave.muda {
+  cursor: default;
+  opacity: 0.65;
+}
+.llave .mesita {
+  display: block;
+  font-family: var(--datos);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--rojo);
+}
+
+/* ---------------- campeón ---------------- */
+.campeon {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  flex-wrap: wrap;
+  border: var(--linea-marco) solid var(--tinta);
+  background: var(--papel-2);
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.4rem;
+}
+.campeon .copa {
+  font-size: 2.6rem;
+  line-height: 1;
+}
+.campeon > div {
+  flex: 1 1 16rem;
+}
+.campeon .rot {
+  display: block;
+  font-family: var(--datos);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--rojo);
+}
+.campeon b {
+  font-family: var(--display);
+  font-size: 1.9rem;
+  line-height: 1.15;
+  display: block;
+}
+.campeon p {
+  margin: 0.25rem 0 0;
+  font-size: 0.92rem;
+  color: var(--tinta-2);
+}
+
+/* ============================================================
+   PANTALLA — premiación
+
+   Acabado el torneo, la pantalla del gimnasio ya no tiene que avisar
+   nada. Lo único que queda por decir se dice en grande.
+   ============================================================ */
+.pt-podio {
+  padding: 0.2rem 0 0;
+}
+.pt-podio > h2 {
+  font-family: var(--datos);
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--rojo);
+  margin: 0 0 0.5rem;
+  text-align: center;
+}
+.pt-tres {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr 1fr;
+  align-items: end;
+  gap: 1rem;
+}
+/* La pantalla es negra: el podio se dibuja con línea, no con relleno, y
+   el campeón se distingue por escala y por el marco grueso. */
+.pt-tres .lugar {
+  border: var(--linea-media) solid var(--tinta-3);
+  padding: 0.5rem 0.8rem 0.6rem;
+  text-align: center;
+}
+.pt-tres .lugar.uno {
+  border: var(--linea-marco) solid var(--rojo);
+  padding: 0.8rem 0.8rem 0.9rem;
+}
+.pt-tres .med {
+  display: block;
+  font-family: var(--datos);
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--papel-3);
+}
+.pt-tres .lugar.uno .med {
+  color: var(--rojo);
+  font-size: 1.3rem;
+}
+.pt-tres .lugar b {
+  display: block;
+  font-family: var(--display);
+  font-size: 1.35rem;
+  line-height: 1.2;
+  color: var(--papel);
+  overflow-wrap: anywhere;
+}
+.pt-tres .lugar.uno b {
+  font-size: 2.2rem;
+}
+.pt-tres .lugar em,
+.pt-tres .lugar b em {
+  display: block;
+  font-family: var(--texto);
+  font-style: normal;
+  font-weight: 400;
+  font-size: 0.9rem;
+  color: var(--papel-3);
+}
+/* Los dos terceros van uno debajo del otro y necesitan separarse. */
+.pt-tres .lugar.tres b + b {
+  margin-top: 0.5rem;
+}
+@media (max-width: 60rem) {
+  .pt-tres {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   ACTA DEL TORNEO
+
+   Esta vista no es la aplicación: es un documento. Rompe con el resto
+   del sistema visual a propósito —papel blanco, tipografía neutra,
+   nada de rojo ni de trama— porque va a acabar impreso, fotocopiado y
+   engrapado a un expediente, y ahí las decisiones de pantalla estorban.
+
+   El PDF lo hace el navegador desde el diálogo de impresión. No hay
+   biblioteca de por medio: un acta tiene que poder reimprimirse dentro
+   de cinco años, y para eso conviene que no dependa de nada.
+   ============================================================ */
+.informe {
+  min-height: 100%;
+  background: var(--papel-3);
+  padding: 0 0 3rem;
+}
+.inf-barra {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  background: var(--tinta);
+  color: var(--papel);
+  padding: 0.7rem 1.1rem;
+}
+.inf-barra .sub {
+  font-size: 0.86rem;
+  color: var(--papel-3);
+  margin: 0;
+}
+/* Los botones vienen pensados para fondo claro; aquí la barra es negra. */
+.inf-barra .btn {
+  background: var(--papel);
+  color: var(--tinta);
+  border-color: var(--papel);
+}
+.inf-barra .btn.leve {
+  background: none;
+  color: var(--papel);
+}
+
+.hoja {
+  max-width: 47rem;
+  margin: 1.6rem auto;
+  background: #fff;
+  color: #111;
+  padding: 2.6rem 3rem 3rem;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.42;
+}
+.hoja h1 {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 19pt;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.hoja h2 {
+  font-size: 12.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  border-bottom: 1.5px solid #111;
+  padding-bottom: 0.15rem;
+  margin: 1.9rem 0 0.7rem;
+}
+.hoja h3 {
+  font-size: 11pt;
+  margin: 1rem 0 0.35rem;
+}
+.hoja section {
+  break-inside: auto;
+}
+.inf-cab {
+  border-bottom: 3px solid #111;
+  padding-bottom: 0.7rem;
+}
+.inf-cab p {
+  margin: 0.25rem 0 0;
+}
+.inf-sub {
+  font-size: 9pt;
+  color: #666;
+}
+
+.inf-podio {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.inf-podio li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  border-bottom: 1px solid #ddd;
+  padding: 0.35rem 0;
+}
+.inf-podio .puesto {
+  width: 2.6rem;
+  font-weight: 700;
+  color: #666;
+}
+.inf-podio b {
+  font-size: 12pt;
+}
+.inf-podio em {
+  font-style: normal;
+  color: #666;
+  font-size: 9.5pt;
+}
+
+.inf-datos,
+.inf-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5pt;
+}
+.inf-datos th {
+  text-align: left;
+  width: 9rem;
+  font-weight: 700;
+  padding: 0.22rem 0.5rem 0.22rem 0;
+  vertical-align: top;
+}
+.inf-datos td {
+  padding: 0.22rem 0;
+}
+.inf-tabla th {
+  text-align: left;
+  font-weight: 700;
+  border-bottom: 1.5px solid #111;
+  padding: 0.25rem 0.4rem;
+}
+.inf-tabla td {
+  border-bottom: 1px solid #e2e2e2;
+  padding: 0.25rem 0.4rem;
+  vertical-align: top;
+}
+.inf-tabla tr.clasifica td {
+  background: #f0f0f0;
+  font-weight: 600;
+}
+.inf-tabla .gana {
+  font-weight: 700;
+}
+.inf-tabla .marcador {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.inf-tabla .parciales {
+  font-variant-numeric: tabular-nums;
+  color: #555;
+  font-size: 9pt;
+}
+.inf-grupo,
+.inf-ronda {
+  break-inside: avoid;
+  margin-bottom: 1rem;
+}
+.inf-acta {
+  font-size: 9.5pt;
+  margin: 0.4rem 0;
+  padding-left: 1.3rem;
+}
+.inf-acta li {
+  margin-bottom: 0.15rem;
+}
+.inf-nota {
+  font-size: 9pt;
+  color: #555;
+  margin: 0.5rem 0 0;
+}
+.inf-pie {
+  margin-top: 2.2rem;
+  border-top: 1px solid #bbb;
+  padding-top: 0.5rem;
+  font-size: 8.5pt;
+  color: #666;
+}
+
+/* Al imprimir sale la hoja y nada más: ni barra, ni fondo, ni la
+   aplicación de atrás. Los márgenes los pone la página, no el CSS. */
+@media print {
+  @page {
+    margin: 1.6cm;
+  }
+  body {
+    background: #fff;
+  }
+  .inf-barra {
+    display: none;
+  }
+  .informe {
+    background: #fff;
+    padding: 0;
+  }
+  .hoja {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    font-size: 10pt;
+  }
+  .hoja h2 {
+    break-after: avoid;
+  }
+  .inf-tabla thead {
+    display: table-header-group;
+  }
+  .inf-tabla tr {
+    break-inside: avoid;
+  }
+}
+
+/* La guía cuando ya se acabó: el nombre del campeón es lo único que
+   importa en la pantalla, y el borde rojo dice que esto ya no es un paso
+   pendiente sino el final del camino. */
+.guia.fin {
+  border-left: var(--linea-marco) solid var(--rojo);
+}
+/* La variante clara hereda colores pensados para fondo oscuro: el título
+   y la explicación se quedarían en blanco sobre blanco. */
+.guia.lista .guia-titulo {
+  color: var(--tinta);
+}
+.guia.lista .guia-porque p {
+  color: var(--tinta-2);
+}
+.guia.lista .guia-porque {
+  border-left-color: var(--rojo);
+}
+.guia.lista .guia-porque b {
+  color: var(--rojo);
+}
+.guia.fin .guia-num {
+  color: var(--rojo);
+}
+.guia.fin .guia-titulo {
+  font-size: 1.75rem;
+}
+
+/* ============================================================
+   TIEMPO MUERTO Y TARJETAS
+
+   Las dos cosas que el árbitro hace en la mesa además de contar. Van con
+   el mismo tratamiento que el descanso —el juego está parado, la pantalla
+   lo dice entera— porque son lo mismo: el partido no corre y hace falta
+   un acto explícito para que vuelva a correr.
+   ============================================================ */
+.aviso.tiempo .caja {
+  border-color: var(--mostaza);
+}
+/* El panel de tarjetas es alto: en una tablet apaisada no cabe entero, y
+   cortarle el título por arriba es peor que dejarlo desplazar. */
+.aviso.sancion .caja {
+  max-width: 30rem;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 1.1rem 1.3rem;
+}
+.aviso.sancion h3 {
+  font-size: 1.45rem;
+}
+.aviso.sancion p {
+  margin-bottom: 0.8rem;
+}
+.aviso .motivo {
+  width: 100%;
+  font-family: var(--texto);
+  font-size: 0.95rem;
+  background: var(--papel-2);
+  border: var(--linea-media) solid var(--tinta);
+  padding: 0.45rem 0.6rem;
+  margin-bottom: 0.9rem;
+}
+.faltas {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.falta {
+  display: block;
+  text-align: left;
+  background: var(--papel-2);
+  border: var(--linea-media) solid var(--tinta);
+  border-left-width: var(--linea-marco);
+  padding: 0.5rem 0.7rem;
+  cursor: pointer;
+  font: inherit;
+}
+.falta:hover {
+  background: var(--papel);
+}
+.falta b {
+  display: block;
+  font-family: var(--datos);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+.falta span {
+  font-size: 0.86rem;
+  color: var(--tinta-2);
+  line-height: 1.35;
+}
+.falta.amarilla {
+  border-left-color: var(--mostaza);
+}
+.falta.roja {
+  border-left-color: var(--rojo);
+}
+.falta.roja b {
+  color: var(--rojo-2);
+}
+
+/* Las tarjetas ya sacadas, en el pie del tablero: el árbitro tiene que
+   poder ver en qué falta va cada uno antes de sacar la siguiente. */
+.tarjetitas {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+.tj {
+  font-family: var(--datos);
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.22rem 0.3rem;
+  color: var(--tinta);
+  min-width: 1.1rem;
+  text-align: center;
+}
+.tj.amarilla {
+  background: var(--mostaza);
+}
+.tj.roja {
+  background: var(--rojo);
+  color: var(--papel);
+}
+.aviso .fila.centrada .btn em {
+  font-style: normal;
+  font-weight: 400;
+  opacity: 0.65;
+}
+
+/* ============================================================
+   CATEGORÍA Y ARCHIVO DE TORNEOS
+
+   La categoría se elige antes que nada porque decide cómo se lee todo lo
+   demás, así que ocupa el ancho entero y se ve de lejos. El archivo, en
+   cambio, es una repisa: renglones sobrios donde el único que destaca es
+   el que está abierto.
+   ============================================================ */
+.modos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.7rem;
+}
+.modo {
+  display: block;
+  text-align: left;
+  font: inherit;
+  background: var(--papel-2);
+  border: var(--linea-media) solid var(--tinta);
+  padding: 0.75rem 0.9rem 0.85rem;
+  cursor: pointer;
+}
+.modo:hover {
+  background: var(--papel);
+}
+.modo b {
+  display: block;
+  font-family: var(--datos);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+.modo span {
+  display: block;
+  font-size: 0.86rem;
+  color: var(--tinta-2);
+  line-height: 1.35;
+  margin-top: 0.15rem;
+}
+.modo.on {
+  background: var(--tinta);
+  color: var(--papel);
+  border-color: var(--tinta);
+}
+.modo.on span {
+  color: var(--papel-3);
+}
+
+.estante {
+  list-style: none;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  border-top: var(--linea-fina) solid var(--papel-3);
+}
+.tsel {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 0;
+  border-bottom: var(--linea-fina) solid var(--papel-3);
+}
+.tsel.abierto {
+  border-left: var(--linea-marco) solid var(--rojo);
+  padding-left: 0.7rem;
+  background: var(--papel-2);
+}
+.tinfo {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.tinfo b {
+  display: block;
+  font-family: var(--datos);
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.tmeta {
+  display: block;
+  font-size: 0.86rem;
+  color: var(--tinta-2);
+}
+.tmeta .etapa {
+  margin-right: 0.3rem;
+  font-style: normal;
+}
+.tabierto {
+  font-family: var(--datos);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--rojo);
+}
+.inf-tabla .marca {
+  font-style: normal;
+  font-weight: 400;
+  font-size: 8.5pt;
+  color: #a00;
+}
+
+/* ---------------- partido a distancia ---------------- */
+/* Lo que ve un jugador al abrir su enlace, y la pestaña «A distancia» de
+   la mesa de control. La tarjeta del resultado está pensada para que una
+   captura de pantalla baste como comprobante. */
+a.btn {
+  text-decoration: none;
+}
+.jugar {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--papel);
+}
+.jg-top {
+  background: var(--tinta);
+  color: var(--papel);
+  padding: 1.2rem 1rem 1rem;
+}
+.jg-top .marca {
+  font-size: clamp(2rem, 8vw, 2.8rem);
+  max-width: 40rem;
+  margin: 0 auto;
+}
+.jg-top p {
+  max-width: 40rem;
+  margin: 0.25rem auto 0;
+  font-family: var(--datos);
+  font-size: 1.15rem;
+  color: var(--papel-3);
+}
+.jg-cuerpo {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1.4rem 1rem 3rem;
+}
+.jg-fin {
+  border: var(--linea-marco) solid var(--tinta);
+  background: var(--papel-2);
+  padding: 1rem 1.1rem 1.1rem;
+  text-align: center;
+}
+.jg-fin .eti {
+  font-family: var(--datos);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.85rem;
+  color: var(--tinta-3);
+}
+.jg-marcador {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0.6rem 0 0.4rem;
+}
+.jg-marcador span {
+  font-family: var(--datos);
+  font-weight: 700;
+  font-size: 1.35rem;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.jg-marcador span:first-child {
+  text-align: right;
+}
+.jg-marcador span:last-child {
+  text-align: left;
+}
+.jg-marcador span.gana {
+  color: var(--rojo);
+}
+.jg-marcador b {
+  font-family: var(--datos);
+  font-weight: 700;
+  font-size: clamp(2.8rem, 13vw, 3.8rem);
+  line-height: 1;
+}
+.jg-sets {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 0.9rem;
+  font-family: var(--datos);
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0.4rem 0;
+}
+.jg-quien {
+  font-size: 0.9rem;
+  color: var(--tinta-2);
+  margin: 0.3rem 0 0.6rem;
+}
+.jg-codigo {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.72rem;
+  color: var(--tinta-3);
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+.jg-ayuda {
+  margin-top: 1.2rem;
+}
+.revisiones {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.9rem;
+}
+.rev {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: 0.1rem 0.7rem;
+  padding: 0.45rem 0.7rem;
+  border-left: var(--linea-marco) solid var(--tinta-3);
+  background: var(--papel-2);
+  font-size: 0.92rem;
+}
+.rev b {
+  font-family: var(--datos);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.9rem;
+}
+.rev em {
+  grid-column: 2;
+  font-style: normal;
+  color: var(--tinta-2);
+  font-size: 0.86rem;
+}
+.rev.nuevo {
+  border-left-color: var(--azul);
+}
+.rev.nuevo b {
+  color: var(--azul);
+}
+.rev.error {
+  border-left-color: var(--rojo-2);
+}
+.rev.error b {
+  color: var(--rojo-2);
+}
+@media (max-width: 480px) {
+  .rev {
+    grid-template-columns: 1fr;
+  }
+  .rev em {
+    grid-column: 1;
   }
 }

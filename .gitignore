@@ -4,3 +4,15 @@ dev-dist/
 *.local
 .DS_Store
 *.tsbuildinfo
+
+# respaldo que escribe el relevo durante el torneo (lleva los accesos)
+datos/
+datos-viejo*/
+
+# salidas de los guiones de herramientas/
+jornada.json
+acta.html
+public/_demo.json
+
+# el paquete para llevarse TTorneo (npm run paquete)
+entrega/

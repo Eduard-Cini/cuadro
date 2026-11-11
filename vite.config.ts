@@ -2,20 +2,41 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
-// La ruta base cambia según dónde se publique. En GitHub Pages el sitio
-// cuelga de /cuadro/; en local, de la raíz.
-const base = process.env.BASE_PATH ?? "/cuadro/";
+import { readFileSync } from "node:fs";
 
-export default defineConfig({
+const paquete = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"));
+
+export default defineConfig(({ mode }) => {
+  // La ruta base cambia según dónde se publique. En GitHub Pages el sitio
+  // cuelga de /cuadro/; servido por el relevo del gimnasio, de la raíz.
+  //
+  // Va por modo y no por variable de entorno a propósito: en Windows, una
+  // variable cuyo valor es «/» se convierte en una ruta del sistema antes
+  // de llegar aquí, y el sitio se compila con enlaces rotos.
+  const base = mode === "relevo" ? "/" : (process.env.BASE_PATH ?? "/cuadro/");
+
+  return {
   base,
+  /*
+   * La versión viaja dentro del compilado.
+   *
+   * Sin ella no hay forma de saber, mirando una tablet, si está corriendo
+   * lo último o una copia que el navegador guardó hace tres semanas. Y esa
+   * es justo la pregunta que aparece cuando algo «ya se había arreglado»
+   * pero en la mesa sigue fallando.
+   */
+  define: {
+    __VERSION__: JSON.stringify(paquete.version),
+    __COMPILADO__: JSON.stringify(new Date().toISOString().slice(0, 16).replace("T", " ")),
+  },
   plugins: [
     react(),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "icono-192.png", "icono-512.png"],
       manifest: {
-        name: "Cuadro — gestor de torneos",
-        short_name: "Cuadro",
+        name: "TTorneo — gestor de torneos de tenis de mesa",
+        short_name: "TTorneo",
         description:
           "Gestor de torneos de tenis de mesa que funciona sin conexión. Mesa de control y tablero de árbitro.",
         lang: "es",
@@ -32,25 +53,17 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // La versión nueva toma el control en cuanto está, sin esperar a
+        // que se cierren todas las pestañas. En un torneo nadie va a
+        // cerrar la aplicación de las seis tablets para que se actualicen.
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        // Todo lo que la aplicación necesita está en el propio paquete: no
+        // hay tipografías ni recursos que pedir a ningún servidor externo,
+        // que es lo que permite instalarla en una tablet que nunca ha
+        // tenido conexión.
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
-        // Las tipografías vienen de Google Fonts: se guardan en caché la
-        // primera vez para que el gimnasio sin señal no rompa el diseño.
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\//,
-            handler: "StaleWhileRevalidate",
-            options: { cacheName: "google-fonts-css" },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\//,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "google-fonts-woff",
-              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
       },
     }),
   ],
@@ -58,4 +71,5 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.test.ts"],
   },
+  };
 });

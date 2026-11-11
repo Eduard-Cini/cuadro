@@ -15,11 +15,15 @@ export function Sprite() {
         <rect x="4" y="16" width="3" height="18" />
         <rect x="33" y="16" width="3" height="18" />
       </symbol>
+      <symbol id="tv" viewBox="0 0 40 40">
+        <rect x="3" y="7" width="34" height="23" rx="2.5" />
+        <rect x="14" y="33" width="12" height="3" rx="1.5" />
+      </symbol>
     </svg>
   );
 }
 
-export function Ic({ n, className }: { n: "raq" | "bola" | "mesa"; className?: string }) {
+export function Ic({ n, className }: { n: "raq" | "bola" | "mesa" | "tv"; className?: string }) {
   return (
     <svg className={className ? `ic ${className}` : "ic"} aria-hidden="true">
       <use href={`#${n}`} />
