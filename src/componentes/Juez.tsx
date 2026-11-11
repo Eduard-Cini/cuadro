@@ -311,7 +311,11 @@ export function Juez({
     });
     for (const id of listos) anotarEn(id, valida(quien));
     cambiarEstructura((d) => {
-      for (const p of d.partidos) if (listos.includes(p.id)) p.mesa = 0;
+      for (const p of d.partidos)
+        if (listos.includes(p.id)) {
+          if (p.mesa) p.jugadaEn = p.mesa;
+          p.mesa = 0;
+        }
     });
     setRecibidos([]);
     setNota(

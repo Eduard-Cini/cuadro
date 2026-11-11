@@ -3,6 +3,7 @@ import { podio } from "./cuadro";
 import { pasos } from "./guia";
 import { aplicarHandicap, aplicarReglas, puntosDe, ventajaEntre } from "./handicap";
 import { mesasDestino, moverDeMesa, quitarDeMesa } from "./asignacion";
+import { actividadPorAutor, autorDe, deshechosDe, mesaDondeSeJugo, quienDirigio } from "./actividad";
 import { reducir, revisarParciales } from "./reglas";
 import { calendarioCircular, sortear } from "./sorteo";
 import { aplicarPaquete } from "./sincronizacion";
@@ -420,5 +421,69 @@ describe("mover un partido de mesa", () => {
     const t = base();
     expect(quitarDeMesa(t, "p1")).toBe(true);
     expect(t.partidos[0].mesa).toBe(0);
+  });
+});
+
+/* ---------- lo que hizo cada quien, para el acta ---------- */
+
+describe("actividad leída del registro", () => {
+  const conArbitros = (partidos: Partido[]) =>
+    torneo({
+      arbitros: [
+        { id: "emma", nombre: "Emma", mesa: 1 },
+        { id: "rafa", nombre: "Rafa", mesa: 2 },
+        { id: "sole", nombre: "Sole", mesa: 3 },
+      ],
+      partidos,
+    });
+
+  it("el árbitro sale de quién anotó, aunque al validar se haya liberado la mesa", () => {
+    const p: Partido = { id: "x", etapa: "grupo", aId: "a", bId: "b", mesa: 0, orden: 0, eventos: [] };
+    ganar(p, "a", 2, "rafa");
+    p.eventos.push(ev({ t: "valida" }, "juez"));
+    const t = conArbitros([p]);
+    expect(quienDirigio(t, p)?.nombre).toBe("Rafa");
+    expect(mesaDondeSeJugo(t, p)).toBe(2);
+    p.jugadaEn = 3;
+    expect(mesaDondeSeJugo(t, p)).toBe(3);
+  });
+
+  it("cuenta partidos, puntos y deshechos por árbitro, y lista a los que no dirigieron", () => {
+    const p: Partido = { id: "y", etapa: "grupo", aId: "a", bId: "b", mesa: 0, orden: 0, eventos: [] };
+    const malo = punto("b", "emma");
+    p.eventos.push(punto("a", "emma"), malo, ev({ t: "anula", ref: malo.id }, "emma"));
+    ganar(p, "a", 2, "emma");
+    const filas = actividadPorAutor(conArbitros([p]));
+    const emma = filas.find((f) => f.autor.nombre === "Emma")!;
+    expect(emma).toMatchObject({ partidos: 1, deshechos: 1 });
+    expect(emma.puntos).toBe(2 + 21);
+    expect(filas.map((f) => f.autor.nombre)).toEqual(["Emma", "Rafa", "Sole"]);
+  });
+
+  it("dice qué se deshizo, de quién era el punto y cómo iba el partido", () => {
+    const p: Partido = { id: "z", etapa: "grupo", aId: "a", bId: "b", mesa: 0, orden: 0, eventos: [] };
+    for (let i = 0; i < 7; i++) p.eventos.push(punto("a", "rafa"));
+    for (let i = 0; i < 4; i++) p.eventos.push(punto("b", "rafa"));
+    const malo = punto("b", "rafa");
+    p.eventos.push(malo, ev({ t: "anula", ref: malo.id }, "rafa"));
+    const [d] = deshechosDe(conArbitros([p]), p);
+    expect(d).toMatchObject({ que: "punto", lado: "b", set: 1, marcador: { a: 7, b: 5 }, por: "rafa" });
+    expect(d.deshecho).toBeGreaterThan(d.anotado);
+  });
+
+  it("un punto que cerró un set se describe con el marcador de ese set", () => {
+    const p: Partido = { id: "w", etapa: "grupo", aId: "a", bId: "b", mesa: 0, orden: 0, eventos: [] };
+    for (let i = 0; i < 10; i++) p.eventos.push(punto("a", "rafa"));
+    const ultimo = punto("a", "rafa");
+    p.eventos.push(ultimo, ev({ t: "anula", ref: ultimo.id }, "rafa"));
+    const [d] = deshechosDe(conArbitros([p]), p);
+    expect(d).toMatchObject({ set: 1, marcador: { a: 11, b: 0 } });
+  });
+
+  it("nombra a la mesa de control, a una mesa autogestionada y a una tablet sin alta", () => {
+    const t = conArbitros([]);
+    expect(autorDe(t, "juez").nombre).toBe("Mesa de control");
+    expect(autorDe(t, "autogestion:d1:Luis").nombre).toBe("Mesa autogestionada · Luis");
+    expect(autorDe(t, "d-abc123").tipo).toBe("aparato");
   });
 });

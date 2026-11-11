@@ -345,6 +345,7 @@ export function liberarMesas(t: Torneo): number {
     if (!p.mesa) continue;
     const st = reducir(p, setsDe(t, p));
     if (st.fase === "validado" || (st.terminado && !t.validacionObligatoria)) {
+      p.jugadaEn = p.mesa;
       p.mesa = 0;
       n++;
     }

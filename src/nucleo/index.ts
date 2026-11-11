@@ -11,3 +11,4 @@ export * from "./qr";
 export * from "./guia";
 export * from "./handicap";
 export * from "./remoto";
+export * from "./actividad";

@@ -163,6 +163,9 @@ export interface Partido {
   bId: string | null;
   /** 0 mientras el juez no le haya aprobado mesa. */
   mesa: number;
+  /** Mesa en la que se jugó, anotada al liberarla. `mesa` vuelve a 0 al
+      validar, y sin esto el acta no podría decir dónde fue cada partido. */
+  jugadaEn?: number;
   /** Árbitro asignado. Sin esto, el tablero de nadie lo muestra. */
   arbitroId?: string;
   /** Lugar en el rol de juego. Sirve para ordenar la cola de cada mesa. */

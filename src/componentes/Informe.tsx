@@ -1,4 +1,20 @@
-import { clasificar, estadisticas, etiquetaEtapa, ganadorDe, nombreDe, nombreRonda, podio, reducir, rondasDeLlave, setsDe } from "../nucleo";
+import {
+  actividadPorAutor,
+  autorDe,
+  clasificar,
+  deshechosDe,
+  estadisticas,
+  etiquetaEtapa,
+  ganadorDe,
+  mesaDondeSeJugo,
+  nombreDe,
+  nombreRonda,
+  podio,
+  quienDirigio,
+  reducir,
+  rondasDeLlave,
+  setsDe,
+} from "../nucleo";
 import type { Torneo } from "../nucleo";
 
 interface Props {
@@ -11,6 +27,12 @@ const fecha = (ms: number) =>
 
 const hora = (ms: number | null) =>
   ms === null ? "—" : new Date(ms).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+
+/** Con segundos: un punto deshecho suele corregirse en unos cuantos. */
+const horaFina = (ms: number) =>
+  new Date(ms).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+const QUE_SE_DESHIZO = { punto: "Punto", tarjeta: "Tarjeta", tiempo: "Tiempo muerto", reanuda: "Fin del descanso", otro: "Otro" };
 
 /**
  * El acta del torneo, lista para imprimir o guardar como PDF.
@@ -28,30 +50,26 @@ const hora = (ms: number | null) =>
 export function Informe({ t, alSalir }: Props) {
   const nom = (id: string | null) => nombreDe(t.jugadores.find((j) => j.id === id));
   /**
-   * En qué mesa y con qué árbitro se jugó.
+   * En qué mesa y quién llevó el marcador.
    *
-   * `p.mesa` vuelve a cero cuando el juez libera la mesa al terminar el
-   * partido, así que a la hora de escribir el acta ya no está. El árbitro
-   * sí queda pegado al partido, y su mesa es la que se ocupó.
+   * Sale del registro de eventos y no de lo asignado: al validar, el juez
+   * libera la mesa, y antes eso dejaba el acta sin árbitro en todos los
+   * partidos. Quien anotó los puntos queda escrito en cada uno.
    */
-  const dondeYQuien = (p: { mesa: number; arbitroId?: string }) => {
-    const a = t.arbitros.find((x) => x.id === p.arbitroId) ?? null;
-    const mesa = p.mesa || a?.mesa || 0;
-    if (!mesa && !a) return "—";
-    if (!a) return `Mesa ${mesa}`;
-    return mesa ? `Mesa ${mesa} · ${a.nombre}` : a.nombre;
+  const dondeYQuien = (p: Parameters<typeof quienDirigio>[1]) => {
+    const quien = quienDirigio(t, p);
+    const mesa = mesaDondeSeJugo(t, p);
+    if (!mesa && !quien) return "—";
+    if (!quien) return `Mesa ${mesa}`;
+    return mesa && quien.tipo !== "autogestion" ? `Mesa ${mesa} · ${quien.nombre}` : quien.nombre;
   };
   const club = (id: string | null) => t.jugadores.find((j) => j.id === id)?.club ?? "";
   const exigir = t.validacionObligatoria;
   const enParejas = t.modalidad !== "individual";
   const todos = t.sistema === "todos";
-  /* Lo anotado en una mesa autogestionada lleva el nombre de quien anotó. */
-  const autogestion = (p: { eventos: Array<{ por: string }> }): string | null => {
-    const por = p.eventos.find((e) => e.por.startsWith("autogestion:"))?.por;
-    if (!por) return null;
-    return `Mesa autogestionada · ${por.split(":").slice(2).join(":") || "sin nombre"}`;
-  };
   const p3 = podio(t);
+  const deshechos = t.partidos.flatMap((p) => deshechosDe(t, p).map((d) => ({ p, d })));
+  const actividad = actividadPorAutor(t);
   const rondas = rondasDeLlave(t.partidos);
   const finales = t.partidos.filter((x) => x.etapa === "final");
 
@@ -395,7 +413,7 @@ export function Informe({ t, alSalir }: Props) {
                       <em className="marca"> hándicap +{st.ventaja.a || st.ventaja.b} a {nom(st.ventaja.a ? p.aId : p.bId)}</em>
                     )}
                   </td>
-                  <td>{autogestion(p) ?? dondeYQuien(p)}</td>
+                  <td>{dondeYQuien(p)}</td>
                   <td>{hora(st.hasta)}</td>
                 </tr>
               ))}
@@ -433,7 +451,7 @@ export function Informe({ t, alSalir }: Props) {
                     <td className="marcador">
                       {st.sets.a}–{st.sets.b}
                     </td>
-                    <td>{st.correccion?.por}</td>
+                    <td>{st.correccion ? autorDe(t, st.correccion.por).nombre : "—"}</td>
                     <td>{st.correccion?.nota || "—"}</td>
                     <td>{hora(st.correccion?.ts ?? null)}</td>
                   </tr>
@@ -445,6 +463,52 @@ export function Informe({ t, alSalir }: Props) {
               Ningún resultado fue modificado por la mesa de control. Todos los marcadores son los que registraron los
               árbitros en la mesa.
             </p>
+          )}
+        </section>
+
+        {/* ---------- lo que se deshizo ---------- */}
+        <section>
+          <h2>Puntos deshechos ({deshechos.length})</h2>
+          {deshechos.length ? (
+            <>
+              <table className="inf-tabla">
+                <thead>
+                  <tr>
+                    <th>Partido</th>
+                    <th>Qué</th>
+                    <th>Cómo iba</th>
+                    <th>Anotado</th>
+                    <th>Deshecho</th>
+                    <th>Quién</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {deshechos.map(({ p, d }, i) => (
+                    <tr key={i}>
+                      <td>
+                        {nom(p.aId)} vs {nom(p.bId)}
+                      </td>
+                      <td>
+                        {QUE_SE_DESHIZO[d.que]}
+                        {d.lado && d.que !== "reanuda" ? ` · ${nom(d.lado === "a" ? p.aId : p.bId)}` : ""}
+                      </td>
+                      <td className="marcador">
+                        set {d.set}, {d.marcador.a}–{d.marcador.b}
+                      </td>
+                      <td>{horaFina(d.anotado)}</td>
+                      <td>{horaFina(d.deshecho)}</td>
+                      <td>{autorDe(t, d.por).nombre}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="inf-nota">
+                «Cómo iba» es el marcador justo después de lo que se deshizo. Deshacer no borra nada: el punto sigue en el
+                registro, marcado como anulado, con la hora y el autor de cada paso.
+              </p>
+            </>
+          ) : (
+            <p className="inf-nota">No se deshizo ningún punto en toda la jornada.</p>
           )}
         </section>
 
@@ -477,7 +541,7 @@ export function Informe({ t, alSalir }: Props) {
                       {x.puntos ? ` · ${x.puntos} ${x.puntos === 1 ? "punto" : "puntos"} al contrario` : ""}
                     </td>
                     <td>{x.motivo || "—"}</td>
-                    <td>{x.por}</td>
+                    <td>{autorDe(t, x.por).nombre}</td>
                     <td>{hora(x.ts)}</td>
                   </tr>
                 ))}
@@ -495,27 +559,40 @@ export function Informe({ t, alSalir }: Props) {
         {/* ---------- árbitros ---------- */}
         <section>
           <h2>Cuerpo arbitral</h2>
-          <table className="inf-tabla">
-            <thead>
-              <tr>
-                <th>Mesa</th>
-                <th>Árbitro</th>
-                <th>Partidos dirigidos</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...t.arbitros]
-                .sort((a, b) => a.mesa - b.mesa)
-                .map((a) => (
-                  <tr key={a.id}>
-                    <td>{a.mesa}</td>
-                    <td>{a.nombre}</td>
-                    <td>{jugados.filter(({ p }) => p.arbitroId === a.id).length}</td>
+          {actividad.length ? (
+            <table className="inf-tabla">
+              <thead>
+                <tr>
+                  <th>Mesa</th>
+                  <th>Quién</th>
+                  <th>Partidos dirigidos</th>
+                  <th>Puntos anotados</th>
+                  <th>Deshechos</th>
+                  <th>Tarjetas</th>
+                  <th>Tiempos muertos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {actividad.map((f) => (
+                  <tr key={f.autor.por}>
+                    <td>{f.autor.mesa ?? "—"}</td>
+                    <td>{f.autor.nombre}</td>
+                    <td>{f.partidos}</td>
+                    <td>{f.puntos}</td>
+                    <td>{f.deshechos}</td>
+                    <td>{f.tarjetas}</td>
+                    <td>{f.tiempos}</td>
                   </tr>
                 ))}
-            </tbody>
-          </table>
-          {!t.arbitros.length && <p className="inf-nota">No se registraron árbitros.</p>}
+              </tbody>
+            </table>
+          ) : (
+            <p className="inf-nota">No se registraron árbitros.</p>
+          )}
+          <p className="inf-nota">
+            Sale del registro: cada punto lleva quién lo anotó. «Partidos dirigidos» cuenta los que terminaron con esa
+            persona llevando el marcador; la mesa es la que tiene asignada ahora.
+          </p>
         </section>
 
         <footer className="inf-pie">

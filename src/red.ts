@@ -252,8 +252,11 @@ export function useRelevo(op: Opciones): Conexion {
       seq.current = d.seq ?? seq.current;
       const cuantos = (d.eventos ?? []).reduce((n: number, x: { eventos: Evento[] }) => n + x.eventos.length, 0);
       // El juez es la fuente de la estructura: no se la deja imponer por
-      // el relevo, que solo le devolvería su propio eco con retraso.
-      const estructura: Torneo | null = rol === "juez" ? null : (d.estructura ?? null);
+      // el relevo, que solo le devolvería su propio eco con retraso. La
+      // excepción es una mesa de control en blanco —un navegador nuevo, o
+      // recién recuperada—: no tiene nada que perder, y sin esto se quedaría
+      // con un torneo vacío mientras las tablets juegan el de verdad.
+      const estructura: Torneo | null = rol === "juez" && !estaVacio(t) ? null : (d.estructura ?? null);
       if (estructura || cuantos) {
         alRecibir.current(estructura, d.eventos ?? []);
         // Lo que llega del relevo, el relevo ya lo tiene. Sin esto, cada

@@ -38,9 +38,11 @@ export function Resultados({ t, anotarEn, cambiarEstructura, alAbrir, quien }: P
     anotarEn(partidoId, valida(quien));
     cambiarEstructura((d) => {
       const p = d.partidos.find((x) => x.id === partidoId);
+      // La mesa queda libre, pero el partido conserva dónde se jugó y con
+      // qué árbitro: el acta los necesita después.
       if (p) {
+        if (p.mesa) p.jugadaEn = p.mesa;
         p.mesa = 0;
-        p.arbitroId = undefined;
       }
     });
   };
