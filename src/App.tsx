@@ -104,6 +104,9 @@ export default function App() {
   const [hayJuez, setHayJuez] = useState(false);
   /** Otra pestaña más nueva tomó el trabajo: esta no guarda ni manda. */
   const enPausa = usePestanaUnica(rol !== null && rol !== "pantalla");
+  /* El relevo dejó de contestar por más de unos segundos: no es un tropiezo
+     de la red, es que la ventana se cerró o la computadora se suspendió. */
+  const [sinRelevo, setSinRelevo] = useState(false);
   /** Quién anota en una mesa autogestionada. */
   const [anotador, setAnotador] = useState(() => leer(LLAVE_ANOTADOR) ?? "");
 
@@ -229,6 +232,15 @@ export default function App() {
     torneo: tRef,
     alRecibir: recibir,
   });
+
+  useEffect(() => {
+    if (conexion.estado !== "caido") {
+      setSinRelevo(false);
+      return;
+    }
+    const espera = setTimeout(() => setSinRelevo(true), 6000);
+    return () => clearTimeout(espera);
+  }, [conexion.estado]);
 
   /** Cambiar de torneo es cosa de quien está delante, no del relevo. */
   const adoptarDelRelevo = useCallback(() => {
@@ -722,6 +734,24 @@ export default function App() {
           <p className="nota mal">
             Este aparato ve el torneo pero no puede escribir en él: falta darlo de alta. Ve a «Red» y escribe el código
             de la mesa de control, que sale en la ventana del relevo.
+          </p>
+        )}
+        {sinRelevo && rol === "juez" && (
+          <div className="nota mal">
+            <div>
+              <b>Se perdió la conexión con el relevo.</b>
+              <div>
+                El relevo es la ventana «TTorneo - NO CERRAR» de la computadora del torneo. Si se cerró o la computadora se
+                suspendió, vuelve a abrir «Iniciar torneo.bat». No se pierde nada: lo anotado espera en cada aparato y se
+                manda solo en cuanto vuelva.
+              </div>
+            </div>
+          </div>
+        )}
+        {sinRelevo && rol !== "juez" && rol !== "autogestion" && (
+          <p className="nota mal">
+            Sin conexión con la mesa de control. Sigue anotando: lo que anotes se guarda aquí y se manda solo en cuanto
+            vuelva la conexión.
           </p>
         )}
         {rol === "juez" && conexion.atraso !== null && (

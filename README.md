@@ -58,6 +58,12 @@ De esa decisión salen tres cosas de golpe:
 
 ### Lo que el sistema no decide solo
 
+Una vez que hay partidos con puntos, el sorteo queda fijo: rehacerlo,
+deshacerlo, cambiar el orden o quitar jugadores borraría marcadores ya
+jugados, así que esos botones se apagan y explican por qué. Lo mismo con la
+llave en cuanto la eliminatoria tiene puntos. Para empezar de cero está
+«Torneo nuevo», que guarda el anterior.
+
 Cuando una restricción del sorteo es infactible —cinco jugadores del mismo club
 en cuatro grupos— el sistema cede y **reporta qué restricción cedió**, en vez de
 fallar en silencio. El sorteo por computadora usa una semilla que queda escrita
@@ -213,9 +219,37 @@ aplicación la primera vez, arranca el relevo y abre el navegador. Ahí sale
 un botón, **«Abrir la mesa de control aquí»**, y con eso ya se está dentro.
 
 Son dos gestos en total: un doble clic y un botón. Sin terminal, sin
-escribir órdenes y sin teclear ningún código. La ventana negra que queda es
-el torneo; al cerrarla, se acaba. Si falta Node, el lanzador lo dice con la
-dirección de descarga en vez de cerrarse sin más.
+escribir órdenes y sin teclear ningún código. Si falta Node, el lanzador lo
+dice con la dirección de descarga en vez de cerrarse sin más.
+
+### La ventana «TTorneo - NO CERRAR»
+
+El relevo corre en una ventana negra aparte con ese título. Esa ventana es el
+torneo, y para que no se cierre por un descuido:
+
+- Se abre en la consola clásica de Windows y **no tiene botón de cerrar**.
+  En Windows Terminal, la consola de siempre en Windows 11, no se le puede
+  quitar; por eso el lanzador la abre aparte.
+- Dice en grande «NO CIERRES ESTA VENTANA MIENTRAS SE JUEGA» y cómo
+  terminar de verdad: en la mesa de control, **Red → Terminar el torneo**, o
+  **Ctrl+C** en la ventana.
+- Si aun así se cierra (o la computadora se suspende), no se pierde nada: lo
+  anotado ya está en `datos/` y lo que estaba en camino espera en cada aparato.
+  Lo que sí se detiene es el torneo en vivo: las tablets dejan de recibir, la
+  pantalla se congela y los teléfonos no pueden volver a abrir la aplicación.
+  La mesa de control lo avisa a los pocos segundos («Se perdió la conexión con
+  el relevo») y dice qué hacer: volver a abrir `Iniciar torneo.bat`. Al
+  volver, cada aparato manda lo que tenía guardado.
+
+### Si la dirección de la computadora cambia
+
+El router asigna la dirección y puede darle otra de un día a otro. Los
+teléfonos dados de alta guardan la anterior, así que hay que volver a repartir
+los códigos. El relevo recuerda la dirección de la vez pasada (`datos/red.json`)
+y, si cambió, lo escribe en su ventana y la mesa de control muestra «La
+dirección de esta computadora cambió», con un botón para repartir los códigos
+otra vez. En la pestaña Árbitros, «Generar los códigos de todos» los saca de un
+golpe. El aviso se quita con «Ya los repartí».
 
 El botón solo aparece **en la computadora que sirve el torneo** y solo
 mientras no haya una mesa de control dada de alta. Es deliberado: quien está
@@ -409,6 +443,15 @@ la mesa de control:
 
 Lo anotado lleva el nombre de quien anotó, y el acta lo dice. El juez sigue
 siendo el único que valida y corrige.
+
+**Si dos aparatos anotan el mismo partido** (dos mesas autogestionadas, o una
+autogestionada y un árbitro), no se suman: se guardan las dos versiones y el
+partido queda marcado «dos versiones», sin contar para la tabla. En Resultados
+el juez ve cada versión con su marcador y quién la anotó, y elige «Vale esta»
+o, si eran partes del mismo partido (alguien cambió de teléfono a media
+partida), «juntarlas». La otra versión queda en el registro sin efecto, y el
+acta dice cuál se eligió. Los puntos que anota el propio juez nunca cuentan
+como otra versión.
 
 ## Tiempo muerto y tarjetas
 

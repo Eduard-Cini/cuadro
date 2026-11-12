@@ -462,6 +462,8 @@ export async function probar(
   altaLocalDisponible?: boolean;
   /** Ahí contesta algo, pero no es un relevo: no vale la pena insistir. */
   ajeno?: boolean;
+  /** La dirección de la computadora cambió y el juez aún no lo confirma. */
+  cambioDireccion?: { antes: string; ahora: string } | null;
 }> {
   const base = limpiarUrl(url);
   if (!base) return { ok: false, detalle: "Falta la dirección." };
@@ -479,6 +481,7 @@ export async function probar(
       ok: true,
       juezDadoDeAlta: d.juezDadoDeAlta === true,
       altaLocalDisponible: d.altaLocalDisponible === true,
+      cambioDireccion: (d.cambioDireccion as { antes: string; ahora: string } | null) ?? null,
       detalle: `Relevo encontrado: ${d.eventos ?? 0} eventos, ${d.dispositivos ?? 0} dispositivos dados de alta.`,
     };
   } catch {

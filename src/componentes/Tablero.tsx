@@ -94,6 +94,45 @@ export function Tablero({
   /** A quién se le saca la tarjeta, una vez elegido el lado. */
   const [sancionando, setSancionando] = useState<Lado | null>(null);
   const [motivo, setMotivo] = useState("");
+  /**
+   * Sorteo de quién elige sacar o recibir (reglamento ITTF 2.13.1).
+   *
+   * El ganador se decide en cuanto se toca el botón; los nombres que se
+   * alternan un segundo son solo para que se vea que se sorteó.
+   */
+  const [sorteo, setSorteo] = useState<{ gana: Lado; muestra: Lado; girando: boolean; eligeLado: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!sorteo?.girando) return;
+    const giro = setInterval(
+      () => setSorteo((s) => (s && s.girando ? { ...s, muestra: s.muestra === "a" ? "b" : "a" } : s)),
+      90,
+    );
+    const fin = setTimeout(() => setSorteo((s) => (s ? { ...s, girando: false, muestra: s.gana } : s)), 1300);
+    return () => {
+      clearInterval(giro);
+      clearTimeout(fin);
+    };
+  }, [sorteo?.girando]);
+
+  const sortear = () => {
+    let gana: Lado;
+    try {
+      const x = new Uint8Array(1);
+      crypto.getRandomValues(x);
+      gana = x[0] & 1 ? "a" : "b";
+    } catch {
+      gana = Math.random() < 0.5 ? "a" : "b";
+    }
+    const quieto = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    setSorteo({ gana, muestra: quieto ? gana : "a", girando: !quieto, eligeLado: false });
+  };
+
+  /** Lo que eligió quien ganó el sorteo: quién saca primero. */
+  const decidir = (saque: Lado) => {
+    setSorteo(null);
+    alIniciar(saque, st.invertido);
+  };
 
   const cerrarPanel = () => {
     setPidiendo(null);
@@ -380,6 +419,64 @@ export function Tablero({
           </div>
         )}
 
+        {/* Sorteo antes del primer punto: quien gana elige sacar, recibir
+            o lado; si elige lado, el otro decide el saque. */}
+        {sorteo && preparando && (
+          <div className="aviso on sorteo">
+            <div className="caja">
+              {sorteo.girando ? (
+                <>
+                  <h3>Sorteo</h3>
+                  <p className={`sorteo-nombre ${sorteo.muestra}`}>{nombreDe(sorteo.muestra === "a" ? a : b)}</p>
+                  <p>Decidiendo quién elige…</p>
+                </>
+              ) : !sorteo.eligeLado ? (
+                <>
+                  <h3>Gana el sorteo</h3>
+                  <p className={`sorteo-nombre ${sorteo.gana}`}>{nombreDe(sorteo.gana === "a" ? a : b)}</p>
+                  <p>No saca por ganar: elige si saca o recibe.</p>
+                  <div className="fila centrada">
+                    <button className="btn grande" onClick={() => decidir(sorteo.gana)}>
+                      Elige sacar
+                    </button>
+                    <button className="btn grande" onClick={() => decidir(sorteo.gana === "a" ? "b" : "a")}>
+                      Elige recibir
+                    </button>
+                  </div>
+                  <div className="fila centrada">
+                    <button className="btn leve" onClick={() => setSorteo({ ...sorteo, eligeLado: true })}>
+                      Prefiere elegir lado
+                    </button>
+                    <button className="btn leve" onClick={() => setSorteo(null)}>
+                      Cancelar
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3>{nombreDe(sorteo.gana === "a" ? a : b)} elige lado</h3>
+                  <p>
+                    Entonces el saque lo decide <b>{nombreDe(sorteo.gana === "a" ? b : a)}</b>:
+                  </p>
+                  <div className="fila centrada">
+                    <button className="btn grande" onClick={() => decidir(sorteo.gana === "a" ? "b" : "a")}>
+                      Saca {nombreDe(sorteo.gana === "a" ? b : a)}
+                    </button>
+                    <button className="btn grande" onClick={() => decidir(sorteo.gana)}>
+                      Recibe {nombreDe(sorteo.gana === "a" ? b : a)}
+                    </button>
+                  </div>
+                  <div className="fila centrada">
+                    <button className="btn leve" onClick={() => setSorteo({ ...sorteo, eligeLado: false })}>
+                      Volver
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Descanso entre sets: el reglamento da un minuto y el marcador
             del set siguiente todavía no existe. */}
         {descansando && (
@@ -447,6 +544,9 @@ export function Tablero({
             </button>
           </div>
           <span className="sp" />
+          <button className="bpie" onClick={sortear} title="Sortea quién elige sacar o recibir">
+            Sorteo
+          </button>
           <button className="bpie" onClick={() => alIniciar(st.saca, !st.invertido)}>
             Cambiar lado
           </button>

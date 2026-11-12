@@ -15,6 +15,35 @@ export const PUNTOS_SET = 11;
 export const ordenar = (eventos: Evento[]): Evento[] =>
   [...eventos].sort((x, y) => x.ts - y.ts || (x.id < y.id ? -1 : x.id > y.id ? 1 : 0));
 
+/** Los eventos que hace quien lleva el marcador, no la mesa de control. */
+export const DE_JUEGO = new Set<Evento["t"]>(["inicia", "punto", "anula", "reanuda", "cierra", "tiempo", "tarjeta", "resultado"]);
+
+/**
+ * El aparato que anotó un evento.
+ *
+ * Es el autor, salvo en una mesa autogestionada, que firma con el aparato y
+ * con el nombre de quien anota: ahí cuenta solo el aparato, porque cambiar
+ * de nombre a media tarde no lo convierte en otro.
+ */
+export function fuenteDe(por: string): string {
+  return por.startsWith("autogestion:") ? por.split(":").slice(0, 2).join(":") : por;
+}
+
+/*
+ * Los aparatos que anotaron algo de juego en este partido, en orden de
+ * aparición. El juez no cuenta como otra versión: si termina desde la mesa
+ * de control un partido que empezó un árbitro, es el mismo partido.
+ */
+export function fuentesDe(eventos: Evento[]): string[] {
+  const out: string[] = [];
+  for (const ev of ordenar(eventos)) {
+    if (!DE_JUEGO.has(ev.t) || ev.por === "juez") continue;
+    const f = fuenteDe(ev.por);
+    if (!out.includes(f)) out.push(f);
+  }
+  return out;
+}
+
 /** Identificadores de eventos anulados por un deshacer. */
 function anulados(eventos: Evento[]): Set<string> {
   const s = new Set<string>();
@@ -45,7 +74,29 @@ function anulados(eventos: Evento[]): Set<string> {
  *    partido perdido en la mesa.
  */
 export function reducir(p: Partido, setsPara: number, meta = p.meta ?? PUNTOS_SET): EstadoPartido {
-  const eventos = ordenar(p.eventos);
+  /*
+   * Dos aparatos con el mismo partido.
+   *
+   * Cada anotación tiene identificador propio, así que al unir no se pisan:
+   * se juntan. Si dos mesas autogestionadas llevaron el mismo partido, los
+   * puntos se sumarían en un marcador que no pasó. Por eso un partido con
+   * más de una fuente queda en conflicto hasta que el juez elige; si eligió
+   * una, solo cuentan los eventos de juego de esa, y las demás quedan en el
+   * registro sin efecto. Mientras no elige, se muestra la primera que llegó,
+   * sin que cuente para la tabla.
+   */
+  const todos = ordenar(p.eventos);
+  const muertosTodos = anulados(todos);
+  const fuentes = fuentesDe(todos);
+  let eleccion: EstadoPartido["eleccion"] = null;
+  for (const ev of todos) {
+    if (ev.t === "elige" && !muertosTodos.has(ev.id)) eleccion = { fuente: ev.fuente, por: ev.por, nota: ev.nota, ts: ev.ts };
+  }
+  const conflicto = fuentes.length > 1 && !eleccion;
+  const vale = eleccion ? eleccion.fuente : conflicto ? fuentes[0] : null;
+  const eventos = vale
+    ? todos.filter((ev) => !DE_JUEGO.has(ev.t) || ev.por === "juez" || fuenteDe(ev.por) === vale)
+    : todos;
   const muertos = anulados(eventos);
 
   // Hándicap: el lado con ventaja arranca cada set con esos puntos. Nunca
@@ -276,6 +327,9 @@ export function reducir(p: Partido, setsPara: number, meta = p.meta ?? PUNTOS_SE
     corregido: correccion !== null,
     correccion,
     porSets: correccion ? null : porSets,
+    fuentes,
+    conflicto,
+    eleccion,
     ventaja: { a: va, b: vb },
     desde,
     hasta,
@@ -299,7 +353,8 @@ export function reducir(p: Partido, setsPara: number, meta = p.meta ?? PUNTOS_SE
 export function partidoListo(p: Partido, setsPara: number, exigirValidacion = false): boolean {
   if (!p.aId || !p.bId) return false;
   const st = reducir(p, setsPara);
-  if (!st.terminado) return false;
+  // Con dos versiones sin resolver no hay resultado que contar.
+  if (!st.terminado || st.conflicto) return false;
   return exigirValidacion ? st.fase === "validado" : true;
 }
 

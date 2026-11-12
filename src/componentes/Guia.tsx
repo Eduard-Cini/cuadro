@@ -61,10 +61,11 @@ export function Guia({ t, enRed, dispositivos, alIr, alCambiarModo, alInforme }:
           <div className="guia-porque">
             <b>Por qué</b>
             <p>
-              Los dos que perdieron en semifinales comparten el tercer lugar: el reglamento no obliga a jugar un
-              partido para separarlos, y en un torneo de un día ese partido nunca se juega. Antes de apagar todo,
-              descarga el acta y el archivo del torneo: una vez cerrado el navegador de la mesa de control, lo único
-              que queda de la jornada es lo que hayas guardado.
+              {t.sistema === "todos"
+                ? "En todos contra todos no hay final: el podio sale de la tabla, y los empates se rompen con los criterios del reglamento."
+                : "Los dos que perdieron en semifinales comparten el tercer lugar: el reglamento no obliga a jugar un partido para separarlos, y en un torneo de un día ese partido nunca se juega."}{" "}
+              Antes de apagar todo, descarga el acta y el archivo del torneo: una vez cerrado el navegador de la mesa
+              de control, lo único que queda de la jornada es lo que hayas guardado.
             </p>
           </div>
         )}
@@ -72,8 +73,9 @@ export function Guia({ t, enRed, dispositivos, alIr, alCambiarModo, alInforme }:
           <button className="btn" onClick={alInforme}>
             Ver el acta e imprimirla
           </button>
-          <button className="btn leve" onClick={() => alIr("cuadro")}>
-            Ver la llave
+          {/* En todos contra todos no hay llave: lo que cuenta es la tabla del calendario. */}
+          <button className="btn leve" onClick={() => alIr(t.sistema === "todos" ? "grupos" : "cuadro")}>
+            {t.sistema === "todos" ? "Ver la tabla" : "Ver la llave"}
           </button>
           <button className="btn leve" onClick={() => alIr("torneo")}>
             Descargar el archivo

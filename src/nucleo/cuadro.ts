@@ -5,12 +5,48 @@ import type { Grupo, Partido, Sistema } from "./tipos";
 const id = () => Math.random().toString(36).slice(2, 9);
 
 /**
+ * Qué sembrado va en cada lugar de un cuadro de `n` (potencia de dos).
+ *
+ * Es el orden de siempre: el 1 arriba y el 2 abajo, para que solo puedan
+ * verse en la final; el 3 y el 4 uno en cada mitad, y así. Para 8 queda
+ * 1-8, 4-5, 2-7, 3-6. Cada mitad se arma igual que el cuadro entero, y por
+ * eso el partido `i` de una ronda alimenta al `i/2` de la siguiente.
+ */
+export function ordenDeSiembra(n: number): number[] {
+  let orden = [1];
+  while (orden.length < n) {
+    const m = orden.length * 2;
+    orden = orden.flatMap((s) => [s, m + 1 - s]);
+  }
+  return orden;
+}
+
+/** Ronda en que se cruzarían dos lugares del cuadro (0 es la primera). */
+const rondaDeCruce = (x: number, y: number): number => {
+  let r = 0;
+  while (x >> (r + 1) !== y >> (r + 1)) r++;
+  return r;
+};
+
+/** Todas las permutaciones de `xs`, empezando por el orden original. */
+function permutaciones<T>(xs: T[]): T[][] {
+  if (xs.length <= 1) return [xs];
+  return xs.flatMap((x, i) => permutaciones([...xs.slice(0, i), ...xs.slice(i + 1)]).map((resto) => [x, ...resto]));
+}
+
+/**
  * Arma la eliminatoria con los que avanzan de cada grupo.
  *
- * Los primeros de grupo se colocan en un extremo del cuadro y los segundos
- * en el otro, de modo que un primero y un segundo del mismo grupo solo
- * pueden volver a verse en la final. Si el número de clasificados no es
- * potencia de dos, los mejores sembrados descansan la primera ronda.
+ * Los primeros de grupo toman los primeros lugares de la siembra, en el
+ * orden de los grupos (el grupo A es el del sembrado 1), y los mejores
+ * descansan la primera ronda si los clasificados no son potencia de dos.
+ *
+ * Los segundos (y terceros, si avanzan tres) se acomodan entre los lugares
+ * que les tocan de modo que dos del mismo grupo se crucen lo más tarde
+ * posible: nunca en la primera ronda si se puede evitar, y el segundo de
+ * un grupo en la mitad contraria a la de su primero. Así lo hacen la ITTF
+ * y cualquier torneo bien sorteado: volver a jugar el mismo partido de
+ * grupo en cuartos no le dice nada nuevo a nadie.
  */
 export function armarCuadro(
   grupos: Grupo[],
@@ -19,22 +55,59 @@ export function armarCuadro(
   setsParaGrupos: number,
   exigirValidacion = false,
 ): Partido[] {
-  const clasificados: Array<{ id: string; pos: number }> = [];
-  for (const gr of grupos) {
+  const clasificados: Array<{ id: string; pos: number; grupo: number }> = [];
+  grupos.forEach((gr, g) => {
     const suyos = partidos.filter((p) => p.grupoId === gr.id);
     const ord = clasificar(gr.jugadores, suyos, setsParaGrupos, exigirValidacion);
     for (let i = 0; i < clasifican && i < ord.length; i++) {
-      clasificados.push({ id: ord[i], pos: i });
+      clasificados.push({ id: ord[i], pos: i, grupo: g });
     }
-  }
+  });
   if (clasificados.length < 2) return [];
 
-  clasificados.sort((a, b) => a.pos - b.pos);
+  // Por lugar en el grupo y, dentro de cada lugar, en el orden de los grupos.
+  clasificados.sort((a, b) => a.pos - b.pos || a.grupo - b.grupo);
   let n = 1;
   while (n < clasificados.length) n *= 2;
 
-  const slots: Array<string | null> = new Array(n).fill(null);
-  clasificados.forEach((c, i) => (slots[i] = c.id));
+  // Lugar del cuadro que ocupa cada sembrado (1 es el primero).
+  const siembra = ordenDeSiembra(n);
+  const lugarDe = new Map(siembra.map((s, lugar) => [s, lugar] as const));
+  const rondas = Math.log2(n);
+
+  /** Cuánto estorba un acomodo: cruces del mismo grupo, peor si son pronto. */
+  const costo = (sembrados: typeof clasificados) => {
+    let c = 0;
+    for (let i = 0; i < sembrados.length; i++)
+      for (let j = i + 1; j < sembrados.length; j++)
+        if (sembrados[i].grupo === sembrados[j].grupo)
+          c += 2 ** (rondas - 1 - rondaDeCruce(lugarDe.get(i + 1)!, lugarDe.get(j + 1)!));
+    return c;
+  };
+
+  // Cada nivel (segundos, terceros…) se reacomoda sin tocar a los demás.
+  // Con hasta ocho grupos se prueban todos los acomodos; con más se deja
+  // el orden de los grupos, que es como funcionaba antes.
+  let sembrados = clasificados;
+  const niveles = [...new Set(clasificados.map((c) => c.pos))].filter((p) => p > 0);
+  for (const nivel of niveles) {
+    const desde = sembrados.findIndex((c) => c.pos === nivel);
+    const delNivel = sembrados.filter((c) => c.pos === nivel);
+    if (delNivel.length > 8) continue;
+    let mejor = sembrados;
+    let mejorCosto = costo(sembrados);
+    for (const perm of permutaciones(delNivel)) {
+      const prueba = [...sembrados.slice(0, desde), ...perm, ...sembrados.slice(desde + perm.length)];
+      const c = costo(prueba);
+      if (c < mejorCosto) {
+        mejor = prueba;
+        mejorCosto = c;
+      }
+    }
+    sembrados = mejor;
+  }
+
+  const slots: Array<string | null> = siembra.map((s) => sembrados[s - 1]?.id ?? null);
 
   const finales: Partido[] = [];
   for (let i = 0; i < n / 2; i++) {
@@ -43,8 +116,8 @@ export function armarCuadro(
       etapa: "final",
       ronda: 0,
       slot: i,
-      aId: slots[i],
-      bId: slots[n - 1 - i],
+      aId: slots[2 * i],
+      bId: slots[2 * i + 1],
       mesa: 0,
       orden: i,
       eventos: [],

@@ -1,7 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { comoTexto, estadoMesas, etiquetaEtapa, nombreDe, podio, proyectar, reducir, ritmo, setsDe } from "../nucleo";
+import {
+  clasificar,
+  comoTexto,
+  estadisticas,
+  estadoMesas,
+  etiquetaEtapa,
+  nombreDe,
+  podio,
+  proyectar,
+  reducir,
+  ritmo,
+  setsDe,
+} from "../nucleo";
 import type { EstadoPartido, Partido, Torneo } from "../nucleo";
 import type { Conexion } from "../red";
+import { Ventaja } from "./TarjetaPartido";
 
 interface Props {
   t: Torneo;
@@ -39,9 +52,15 @@ function Tabla({ filas, t, nom, etapaCorta }: TablaProps) {
               {etapaCorta(p)}
             </td>
             <td>
-              <b className={st.ganador === "a" ? "gana" : undefined}>{nom(p.aId)}</b>
+              <b className={st.ganador === "a" ? "gana" : undefined}>
+                {nom(p.aId)}
+                {st.ventaja.a > 0 && <Ventaja puntos={st.ventaja.a} />}
+              </b>
               <span className="vs">vs</span>
-              <b className={st.ganador === "b" ? "gana" : undefined}>{nom(p.bId)}</b>
+              <b className={st.ganador === "b" ? "gana" : undefined}>
+                {nom(p.bId)}
+                {st.ventaja.b > 0 && <Ventaja puntos={st.ventaja.b} />}
+              </b>
               <span className="parciales">
                 {st.historial.map((s, i) => (
                   <span key={i}>
@@ -79,9 +98,17 @@ export function Pantalla({ t, conexion, alSalir }: Props) {
   }, []);
 
   const nom = (id: string | null) => nombreDe(t.jugadores.find((j) => j.id === id), "por definir");
-  /** Dónde se jugó. La mesa ya se liberó; el grupo sigue diciendo algo. */
+  const todos = t.sistema === "todos";
+  /** Dónde se jugó: la jornada en todos contra todos, la letra del grupo o
+      «EL» en la eliminatoria. La mesa ya se liberó y no diría nada. */
   const etapaCorta = (p: Partido) =>
-    p.etapa === "final" ? "EL" : (t.grupos.find((g) => g.id === p.grupoId)?.nombre.split(" ").pop() ?? "–");
+    p.jornada
+      ? `J${p.jornada}`
+      : p.etapa === "final"
+        ? "EL"
+        : (t.grupos.find((g) => g.id === p.grupoId)?.nombre.split(" ").pop() ?? "–");
+  /** Hándicap de un partido por jugar, para la fila de siguientes. */
+  const ventajaDe = (id: string) => t.partidos.find((p) => p.id === id)?.ventaja;
   const club = (id: string | null) => t.jugadores.find((j) => j.id === id)?.club ?? "";
 
   const turnos = useMemo(() => proyectar(t, ahora), [t, ahora]);
@@ -113,6 +140,19 @@ export function Pantalla({ t, conexion, alSalir }: Props) {
   const deLlave = jugados.filter((x) => x.p.etapa === "final");
   const deGrupos = jugados.filter((x) => x.p.etapa === "grupo").slice(0, RESULTADOS_FIN);
 
+  /* En todos contra todos lo que decide es la tabla, así que va en
+     pantalla toda la tarde, no solo al final. */
+  const tabla = useMemo(() => {
+    const gr = t.grupos[0];
+    if (!todos || !gr) return null;
+    const suyos = t.partidos.filter((p) => p.grupoId === gr.id);
+    return {
+      orden: clasificar(gr.jugadores, suyos, t.formatoGrupos, t.validacionObligatoria),
+      filas: estadisticas(gr.jugadores, suyos, t.formatoGrupos, t.validacionObligatoria),
+    };
+  }, [t, todos]);
+  const puntosSet = t.reglamento === "formal" ? 11 : (t.puntosSet ?? 11);
+
   return (
     <div className="pantalla">
       <header className="pt-top">
@@ -121,6 +161,7 @@ export function Pantalla({ t, conexion, alSalir }: Props) {
           {t.sede && <span>{t.sede}</span>}
           <span>{hora(ahora)}</span>
           <span>{faltan} partidos por jugar</span>
+          {puntosSet !== 11 && <span>sets a {puntosSet}</span>}
           <span className={`enlace ${conexion.estado}`}>
             <i />
             {conexion.estado === "conectado" ? "en vivo" : conexion.estado === "apagado" ? "sin red" : "reconectando"}
@@ -176,7 +217,10 @@ export function Pantalla({ t, conexion, alSalir }: Props) {
                 <>
                   <div className="pt-vs">
                     <div className={st.ganador === "a" ? "j gana" : "j"}>
-                      <b>{nom(p.aId)}</b>
+                      <b>
+                        {nom(p.aId)}
+                        {st.ventaja.a > 0 && <Ventaja puntos={st.ventaja.a} />}
+                      </b>
                       <span>{club(p.aId)}</span>
                     </div>
                     <div className="pt-marca">
@@ -188,11 +232,17 @@ export function Pantalla({ t, conexion, alSalir }: Props) {
                       </span>
                     </div>
                     <div className={st.ganador === "b" ? "j gana" : "j"}>
-                      <b>{nom(p.bId)}</b>
+                      <b>
+                        {nom(p.bId)}
+                        {st.ventaja.b > 0 && <Ventaja puntos={st.ventaja.b} />}
+                      </b>
                       <span>{club(p.bId)}</span>
                     </div>
                   </div>
-                  {m.arbitro && <div className="pt-arb">Árbitro: {m.arbitro}</div>}
+                  <div className="pt-arb">
+                    {etiquetaEtapa(t, p)}
+                    {m.arbitro ? ` · Árbitro: ${m.arbitro}` : ""}
+                  </div>
                 </>
               ) : (
                 <div className="pt-libre">libre</div>
@@ -204,8 +254,43 @@ export function Pantalla({ t, conexion, alSalir }: Props) {
       )}
 
       <div className="pt-cols">
+        {/* ---------- la tabla, en todos contra todos ---------- */}
+        {tabla && (
+          <section className="pt-lista">
+            <h2>{terminado ? "Tabla final" : "Tabla"}</h2>
+            <div className="pt-caja">
+              <table className="pt-tabla">
+                <thead>
+                  <tr>
+                    <th className="mesa">#</th>
+                    <th>Jugador</th>
+                    <th className="der" title="Partidos jugados">Jugados</th>
+                    <th className="der" title="Sets ganados y perdidos">Sets</th>
+                    <th className="der" title="2 por partido ganado y 1 por perdido">Puntos</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tabla.orden.map((id, i) => (
+                    <tr key={id}>
+                      <td className="mesa">{i + 1}</td>
+                      <td>
+                        <b>{nom(id)}</b>
+                      </td>
+                      <td className="der">{tabla.filas[id].pj}</td>
+                      <td className="der">
+                        {tabla.filas[id].sg}–{tabla.filas[id].sp}
+                      </td>
+                      <td className="der marcador">{tabla.filas[id].pts}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
         {/* ---------- la eliminatoria, ya terminado ---------- */}
-        {terminado && (
+        {terminado && !todos && (
           <section className="pt-lista">
             <h2>Eliminatoria</h2>
             <div className="pt-caja desliza">
@@ -236,7 +321,15 @@ export function Pantalla({ t, conexion, alSalir }: Props) {
                       {!x.mesaFirme && <i title="Mesa estimada">~</i>}
                     </td>
                     <td>
-                      <b>{nom(x.aId)}</b> <span className="vs">vs</span> <b>{nom(x.bId)}</b>
+                      <b>
+                        {nom(x.aId)}
+                        {ventajaDe(x.partidoId)?.lado === "a" && <Ventaja puntos={ventajaDe(x.partidoId)!.puntos} />}
+                      </b>{" "}
+                      <span className="vs">vs</span>{" "}
+                      <b>
+                        {nom(x.bId)}
+                        {ventajaDe(x.partidoId)?.lado === "b" && <Ventaja puntos={ventajaDe(x.partidoId)!.puntos} />}
+                      </b>
                       <span className="pt-etapa">
                         {etiquetaEtapa(t, t.partidos.find((p) => p.id === x.partidoId)!)}
                       </span>
@@ -262,7 +355,7 @@ export function Pantalla({ t, conexion, alSalir }: Props) {
 
         {/* ---------- lo que ya pasó ---------- */}
         <section className="pt-lista">
-          <h2>{terminado ? "Fase de grupos" : "Resultados"}</h2>
+          <h2>{terminado ? (todos ? "Todos los partidos" : "Fase de grupos") : "Resultados"}</h2>
           <div className={terminado ? "pt-caja desliza" : "pt-caja"}>
             <Tabla filas={terminado ? deGrupos : terminados} nom={nom} t={t} etapaCorta={etapaCorta} />
           </div>

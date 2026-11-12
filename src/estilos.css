@@ -493,6 +493,20 @@ input[type="file"] {
   color: var(--tinta-3);
   font-size: 0.9rem;
 }
+/* «+3»: los puntos de hándicap con que empieza cada set. */
+.hc {
+  display: inline-block;
+  margin-left: 0.35em;
+  padding: 0 0.4em;
+  border-radius: 0.3em;
+  background: var(--tinta);
+  color: var(--papel);
+  font-family: var(--datos);
+  font-size: 0.8em;
+  font-weight: 600;
+  line-height: 1.35;
+  vertical-align: 0.1em;
+}
 .pj .arb {
   font-size: 0.8rem;
   color: var(--tinta-3);
@@ -1794,10 +1808,26 @@ details.ayuda code {
   flex: 1;
   min-height: 0;
 }
+/* En todos contra todos entra una tercera columna: la tabla. */
+.pt-cols:has(> .pt-lista:nth-child(3)) {
+  grid-template-columns: 0.9fr 1.15fr 1fr;
+}
 @media (max-width: 900px) {
-  .pt-cols {
+  .pt-cols,
+  .pt-cols:has(> .pt-lista:nth-child(3)) {
     grid-template-columns: 1fr;
   }
+}
+/* La pantalla es oscura: el hándicap va en claro. Y como va dentro del
+   nombre, que en las tarjetas de mesa es un bloque, se le devuelve su
+   tamaño de etiqueta: si no, se estira a todo lo ancho. */
+.pantalla .hc,
+.pt-vs .j b.hc {
+  display: inline-block;
+  background: var(--papel);
+  color: var(--tinta);
+  font-size: 0.7em;
+  line-height: 1.35;
 }
 .pt-lista {
   display: flex;
@@ -3348,4 +3378,185 @@ a.btn {
   .rev em {
     grid-column: 1;
   }
+}
+
+/* ---------------- ranking por votación ---------------- */
+.votacion {
+  margin-top: 1.4rem;
+  padding-top: 1rem;
+  border-top: var(--linea-media) solid var(--tinta);
+}
+.votacion .sub {
+  font-size: 0.9rem;
+  color: var(--tinta-2);
+  margin: 0 0 1rem;
+  max-width: 52ch;
+}
+.vot-titulo {
+  margin-top: 1.6rem;
+}
+/* Con muchos inscritos la tabla es ancha: se desliza ella, no la página. */
+.vot-desliza {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.vot-tabla th,
+.vot-tabla td {
+  text-align: left;
+}
+.vot-tabla td {
+  padding: 0.2rem 0.25rem;
+}
+.vot-tabla input,
+.vot-tabla select {
+  min-width: 7.5rem;
+  font-size: 0.9rem;
+  padding: 0.2rem 0.1rem;
+}
+.vot-tabla .x {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--tinta-3);
+  font-size: 1rem;
+  padding: 0.1rem 0.3rem;
+}
+.vot-tabla .x:hover {
+  color: var(--rojo);
+}
+.vot-res th.izq,
+.vot-res td.izq {
+  text-align: left;
+}
+.vot-res td.des {
+  font-size: 0.82rem;
+  color: var(--tinta-2);
+  min-width: 12rem;
+}
+.vot-res td.empate {
+  color: var(--rojo-2);
+}
+.vot-avisos {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.vot-nuevos p {
+  margin: 0;
+}
+.vot-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  margin-top: 0.6rem;
+}
+.vot-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.vot-chip input {
+  width: auto;
+}
+.vot-k {
+  max-width: 12rem;
+  margin-bottom: 0.8rem;
+}
+/* Donde empieza un bloque nuevo, una raya más gruesa. */
+.vot-res tr.corte td {
+  border-top: var(--linea-media) solid var(--tinta);
+}
+.vot-estado {
+  font-size: 0.86rem;
+  color: var(--tinta-2);
+}
+.tabla-bloques {
+  margin-top: 0.4rem;
+}
+.tb-bloques th,
+.tb-bloques td {
+  text-align: left;
+  vertical-align: top;
+}
+.tb-bloques th small {
+  display: block;
+  font-family: var(--texto);
+  font-weight: 400;
+  font-size: 0.78rem;
+  color: var(--tinta-3);
+}
+.tb-bloques td input {
+  width: 4.5rem;
+  font-family: var(--datos);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.tb-bloques td small {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--rojo-2);
+}
+.sub.tb-ultimo {
+  margin: 0.5rem 0 0;
+}
+.item .bloque-sel {
+  width: auto;
+  font-size: 0.82rem;
+  padding: 0.1rem 0.6rem 0.1rem 0.1rem;
+  margin-left: 0.4rem;
+}
+
+/* ---------------- partido anotado por dos aparatos ---------------- */
+.sello.conflicto {
+  background: var(--rojo);
+  color: var(--papel);
+  border-color: var(--rojo);
+}
+.conflicto {
+  border-left: 4px solid var(--rojo);
+  padding-left: 0.6rem;
+  margin-bottom: 1.2rem;
+}
+.versiones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin: 0.6rem 0;
+}
+.version {
+  flex: 1 1 14rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.7rem 0.8rem;
+  border: var(--linea-fina) solid var(--tinta-3);
+}
+.version .marcador {
+  font-family: var(--datos);
+  font-size: 1.6rem;
+}
+.version .btn {
+  align-self: flex-start;
+}
+
+/* ---------------- sorteo de saque ---------------- */
+/* Antes del primer punto: quién gana el sorteo y qué elige. */
+.aviso.sorteo .caja {
+  text-align: center;
+}
+.aviso.sorteo .sorteo-nombre {
+  font-family: var(--datos);
+  font-weight: 700;
+  font-size: clamp(2rem, 9vw, 3rem);
+  line-height: 1.05;
+  margin: 0.3rem 0 0.7rem;
+  color: var(--tinta);
+  overflow-wrap: anywhere;
+}
+.aviso.sorteo .sorteo-nombre.a {
+  color: var(--rojo);
+}
+.aviso.sorteo .sorteo-nombre.b {
+  color: var(--azul);
 }

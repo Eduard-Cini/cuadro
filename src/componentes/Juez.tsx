@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   aplicarPaquete,
   armarCuadro,
+  bloquesSugeridos,
   clasificar,
+  enOrdenDeSiembra,
   estadisticas,
   ganadorDe,
   nombreDe,
@@ -13,11 +15,12 @@ import {
   puntosDe,
   reducir,
   repartir,
+  repartirBloques,
   setsDe,
   sortear,
   unir,
 } from "../nucleo";
-import type { Credencial, Evento, Formato, Modalidad, Reglamento, Sistema, Torneo, Vista } from "../nucleo";
+import type { Credencial, Evento, Formato, Modalidad, Reglamento, Sistema, Torneo, Vista, Voto } from "../nucleo";
 import {
   abrirDelArchivo,
   archivarYEmpezar,
@@ -33,7 +36,7 @@ import {
 } from "../almacen";
 import type { EnvioResultados } from "../almacen";
 import type { Conexion } from "../red";
-import { pedirInvitacion, verAccesos } from "../red";
+import { pedirInvitacion, probar, verAccesos } from "../red";
 import { Accesos } from "./Accesos";
 import { Guia } from "./Guia";
 import { Conectar } from "./Conectar";
@@ -41,6 +44,8 @@ import { Distancia } from "./Distancia";
 import { Mesas } from "./Mesas";
 import { Resultados } from "./Resultados";
 import { TarjetaPartido } from "./TarjetaPartido";
+import { TablaBloques } from "./TablaBloques";
+import { Votacion } from "./Votacion";
 
 /**
  * Las categorías que puede tener una jornada.
@@ -157,6 +162,22 @@ export function Juez({
   const [codigos, setCodigos] = useState<Record<string, string>>({});
   /** Partidos que acaban de llegar de una mesa autogestionada. */
   const [recibidos, setRecibidos] = useState<string[]>([]);
+  /** El relevo avisa que la dirección de la computadora cambió. */
+  const [cambioDir, setCambioDir] = useState<{ antes: string; ahora: string } | null>(null);
+  useEffect(() => {
+    if (!relevo.url) return;
+    let vivo = true;
+    const mirar = async () => {
+      const r = await probar(relevo.url);
+      if (vivo && r.ok) setCambioDir(r.cambioDireccion ?? null);
+    };
+    void mirar();
+    const reloj = setInterval(() => void mirar(), 15000);
+    return () => {
+      vivo = false;
+      clearInterval(reloj);
+    };
+  }, [relevo.url]);
   /** Cuántos aparatos hay dados de alta. Lo necesita la guía. */
   const [dispositivos, setDispositivos] = useState(0);
   /** La configuración se abre para tocarla y se vuelve a cerrar. */
@@ -171,16 +192,39 @@ export function Juez({
   );
   /** Sube cada vez que se toca el archivo, para volver a leer la lista. */
   const [verArchivo, setVerArchivo] = useState(0);
+  const [verVotacion, setVerVotacion] = useState(false);
+  /**
+   * La tabla de votaciones mientras se llena. Vive aquí y no en la
+   * votación para no perderla al cambiar de pestaña; al usar el resultado
+   * se guarda en el torneo. Nulo: la que quedó guardada.
+   */
+  const [borradorVotos, setBorradorVotos] = useState<Voto[] | null>(null);
+  useEffect(() => setBorradorVotos(null), [t.id]);
   const archivo = useRef<HTMLInputElement>(null);
   const respaldo = useRef<HTMLInputElement>(null);
 
   const nom = (id: string | null) => nombreDe(t.jugadores.find((j) => j.id === id));
   const exigir = t.validacionObligatoria;
+  /*
+   * Con algún partido ya anotado, el sorteo y la lista de jugadores quedan
+   * fijos. Rehacer el sorteo, quitar a un jugador o vaciar la lista borra
+   * los partidos con sus marcadores, y eso a media jornada no tiene
+   * arreglo. Si alguien no se presenta, sus partidos se registran como
+   * perdidos con «Corregir».
+   */
+  const yaSeJuega = t.partidos.some((p) => p.eventos.length > 0);
+  const llaveJugada = t.partidos.some((p) => p.etapa === "final" && p.eventos.length > 0);
+  const POR_QUE_FIJO =
+    "Ya hay partidos con puntos anotados: rehacerlo borraría sus marcadores. Para empezar de cero, usa «Torneo nuevo» en la pestaña Torneo; este queda guardado en el archivo.";
   const todos = t.sistema === "todos";
   const hc = { base: "ranking" as const, porLugar: 1, ...(t.handicap ?? { activo: false, escalon: 100, tope: 7 }) };
   const formal = t.reglamento === "formal";
   const puntos = puntosDe(t);
   const porLugar = hc.base === "lugar";
+  const porBloque = hc.base === "bloque";
+  /** Bloques de nivel que hay en la lista: el número del más bajo. */
+  const kBloques = Math.max(0, ...t.jugadores.map((j) => j.bloque ?? 0));
+  const [kNuevo, setKNuevo] = useState("");
   const enRed = conexion.estado === "conectado" && credencial?.papel === "juez";
 
   /* La guía necesita saber si ya hay tablets dadas de alta. */
@@ -252,6 +296,34 @@ export function Juez({
       [lista[i], lista[k]] = [lista[k], lista[i]];
       d.jugadores = lista;
       d.siembraManual = true;
+    });
+  }
+
+  /** Deja la lista en el orden de la votación, pone a cada quien en su bloque y guarda los votos. */
+  function ordenarPorVotacion(orden: string[], bloques: Record<string, number>, votos: Voto[]) {
+    cambiarEstructura((d) => {
+      const porId = new Map(d.jugadores.map((j) => [j.id, j]));
+      const arriba = orden.flatMap((id) => porId.get(id) ?? []);
+      d.jugadores = [...arriba, ...d.jugadores.filter((j) => !orden.includes(j.id))];
+      for (const j of d.jugadores) j.bloque = bloques[j.id] || undefined;
+      d.siembraManual = true;
+      d.votacion = { votos };
+    });
+    setBorradorVotos(null);
+  }
+
+  /** Inscribe a quienes venían en los votos y no estaban en la lista. */
+  function inscribirDesdeVotos(nombres: string[]) {
+    const nuevos = nombres.map((nombre) => ({ id: nuevoId(), nombre, nombre2: "", club: "", rank: 0 }));
+    if (nuevos.length) cambiarEstructura((d) => void d.jugadores.push(...nuevos));
+    return nuevos;
+  }
+
+  /** Reparte la lista en k bloques: por los puntos de la votación si la hay, si no por el lugar. */
+  function repartirEnBloques(k: number) {
+    cambiarEstructura((d) => {
+      const b = repartirBloques(enOrdenDeSiembra(d), d.votacion?.votos, k);
+      for (const j of d.jugadores) j.bloque = b.get(j.id);
     });
   }
 
@@ -332,11 +404,10 @@ export function Juez({
       setNota("Hacen falta al menos dos jugadores.");
       return;
     }
-    if (
-      t.partidos.some((p) => p.eventos.length) &&
-      !confirm("Ya hay marcadores capturados. El sorteo los borra. ¿Seguir?")
-    )
+    if (yaSeJuega) {
+      setNota(POR_QUE_FIJO);
       return;
+    }
 
     const s = conAzar ? (Number(semilla) || Math.floor(Math.random() * 1_000_000)) : undefined;
     cambiarEstructura((d) => {
@@ -366,6 +437,10 @@ export function Juez({
   function hacerCuadro() {
     if (!t.grupos.length) {
       setNota("Primero hay que sortear los grupos.");
+      return;
+    }
+    if (llaveJugada) {
+      setNota("La eliminatoria ya tiene partidos anotados: volver a armarla borraría sus marcadores.");
       return;
     }
     cambiarEstructura((d) => {
@@ -443,6 +518,32 @@ export function Juez({
 
   return (
     <div>
+      {cambioDir && credencial?.papel === "juez" && (
+        <div className="nota mal">
+          <div>
+            <b>La dirección de esta computadora cambió.</b>
+            <div>
+              Antes era {cambioDir.antes} y ahora es {cambioDir.ahora}. Los teléfonos que ya estaban dados de alta no la
+              conocen: cada árbitro tiene que volver a escanear su código QR.
+            </div>
+            <div className="fila">
+              <button className="btn" onClick={alRepartir}>
+                Repartir los códigos otra vez
+              </button>
+              <button
+                className="btn leve"
+                onClick={async () => {
+                  await conexion.pedir("/api/direccion-vista", "POST", {});
+                  setCambioDir(null);
+                }}
+              >
+                Ya los repartí
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Guia
         t={t}
         enRed={enRed}
@@ -554,9 +655,11 @@ export function Juez({
               <b>
                 {!hc.activo || formal
                   ? "no"
-                  : porLugar
-                    ? `${hc.porLugar} por cada lugar de diferencia en la lista, hasta ${hc.tope} por set`
-                    : `un punto por cada ${hc.escalon} de ranking, hasta ${hc.tope} por set`}
+                  : porBloque
+                    ? `por bloques de nivel (${kBloques || "sin"} bloques), hasta ${hc.tope} por set`
+                    : porLugar
+                      ? `${hc.porLugar} por cada lugar de diferencia en la lista, hasta ${hc.tope} por set`
+                      : `un punto por cada ${hc.escalon} de ranking, hasta ${hc.tope} por set`}
               </b>
             </li>
             <li>
@@ -752,17 +855,24 @@ export function Juez({
                   <span>La diferencia sale de</span>
                   <select
                     value={hc.base}
-                    onChange={(e) =>
-                      cambiarEstructura(
-                        (d) => void (d.handicap = { ...hc, base: e.target.value === "lugar" ? "lugar" : "ranking" }),
-                      )
-                    }
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      const base = v === "lugar" || v === "bloque" ? v : "ranking";
+                      cambiarEstructura((d) => void (d.handicap = { ...hc, base }));
+                    }}
                   >
                     <option value="ranking">El ranking de cada jugador</option>
                     <option value="lugar">Su lugar en la lista, del 1 al n (sin ranking)</option>
+                    <option value="bloque">Bloques de nivel, por ejemplo de una votación</option>
                   </select>
                 </label>
-                {porLugar
+                {porBloque
+                  ? campo("Número de bloques", kNuevo || String(kBloques || bloquesSugeridos(t.jugadores.length)), setKNuevo, {
+                      type: "number",
+                      min: 1,
+                      max: Math.max(1, t.jugadores.length),
+                    })
+                  : porLugar
                   ? campo(
                       "Puntos de ventaja por cada lugar",
                       hc.porLugar,
@@ -790,7 +900,44 @@ export function Juez({
                 )}
               </div>
             )}
-            {hc.activo && !porLugar && (
+            {hc.activo && porBloque && (
+              <>
+                <div className="fila">
+                  <button
+                    className="btn leve"
+                    disabled={t.jugadores.length < 2}
+                    onClick={() => {
+                      repartirEnBloques(Number(kNuevo) || kBloques || bloquesSugeridos(t.jugadores.length));
+                      setKNuevo("");
+                    }}
+                  >
+                    {t.votacion?.votos.length ? "Repartir con los puntos de la votación" : "Repartir por el orden de la lista"}
+                  </button>
+                </div>
+                <p className="sub" style={{ margin: ".9rem 0 0" }}>
+                  Los del mismo bloque no se dan ventaja. Entre bloques, el de abajo empieza cada set con los puntos de la
+                  tabla. Los bloques salen de la votación (pestaña Jugadores) o de repartir la lista aquí, y en la lista
+                  puedes cambiar a alguien de bloque. A quien no tiene bloque no se le da ventaja.
+                </p>
+                {kBloques >= 2 ? (
+                  <TablaBloques
+                    k={kBloques}
+                    tabla={hc.tablaBloques}
+                    meta={puntos}
+                    tope={hc.tope}
+                    integrantes={Array.from({ length: kBloques }, (_, b) =>
+                      enOrdenDeSiembra(t)
+                        .filter((j) => j.bloque === b + 1)
+                        .map((j) => nombreDe(j)),
+                    )}
+                    alCambiar={(tabla) => cambiarEstructura((d) => void (d.handicap = { ...hc, tablaBloques: tabla }))}
+                  />
+                ) : (
+                  <p className="nota">Todavía no hay dos bloques: haz la votación o reparte la lista.</p>
+                )}
+              </>
+            )}
+            {hc.activo && hc.base === "ranking" && (
               <p className="sub" style={{ margin: ".9rem 0 0" }}>
                 Ejemplo: con un punto por cada {hc.escalon}, si juegan uno de 1500 y otro de {1500 - hc.escalon * 3} de
                 ranking, el de {1500 - hc.escalon * 3} empieza cada set con {Math.min(hc.tope, 3)}{" "}
@@ -960,7 +1107,9 @@ export function Juez({
           <p className="sub">
             El orden de la lista es la siembra: por ranking, o el que tú fijes con las flechas aunque nadie tenga
             ranking.
-            {hc.activo && !formal && (porLugar
+            {hc.activo && !formal && (porBloque
+              ? " El hándicap sale del bloque de cada quien: los del mismo bloque no se dan ventaja."
+              : porLugar
               ? " El hándicap sale de este orden: el 1 es el mejor."
               : " El hándicap usa el ranking: a quien no tenga no se le da ventaja.")}
           </p>
@@ -983,8 +1132,12 @@ export function Juez({
             <button className="btn leve" onClick={() => setBulk((b) => !b)}>
               Pegar lista o cargar CSV
             </button>
+            <button className="btn leve" onClick={() => setVerVotacion((v) => !v)}>
+              {verVotacion ? "Cerrar la votación" : "Ranking por votación"}
+            </button>
             <button
               className="btn grave"
+              disabled={yaSeJuega}
               onClick={() => {
                 if (!t.jugadores.length || !confirm("Se borran los jugadores, los grupos y los partidos. ¿Seguir?")) return;
                 cambiarEstructura((d) => {
@@ -993,7 +1146,9 @@ export function Juez({
                   d.partidos = [];
                   d.relajaciones = [];
                   d.actaSorteo = [];
+                  delete d.votacion;
                 });
+                setBorradorVotos(null);
               }}
             >
               Vaciar
@@ -1035,12 +1190,28 @@ export function Juez({
             </div>
           )}
 
+          {verVotacion && (
+            <Votacion
+              lista={enOrdenDeSiembra(t)}
+              votos={borradorVotos ?? t.votacion?.votos ?? []}
+              alCambiar={setBorradorVotos}
+              alAplicar={(orden, bloques) => ordenarPorVotacion(orden, bloques, borradorVotos ?? t.votacion?.votos ?? [])}
+              alInscribir={inscribirDesdeVotos}
+              enParejas={enParejas}
+              handicap={
+                formal ? null : { activo: hc.activo, base: hc.base, tabla: hc.tablaBloques, tope: hc.tope, meta: puntos }
+              }
+              alTabla={(tabla) => cambiarEstructura((d) => void (d.handicap = { ...hc, tablaBloques: tabla }))}
+              alActivarBloques={() => cambiarEstructura((d) => void (d.handicap = { ...hc, activo: true, base: "bloque" }))}
+            />
+          )}
+
           {t.jugadores.length > 1 && (
             <div className="sec compacta">
               <p className="sub">
                 {t.siembraManual
                   ? "La lista está en el orden que tú fijaste, y ese orden es la siembra: los de arriba se reparten primero, uno por grupo."
-                  : "La lista va por ranking, y ese orden es la siembra. Si no tienes ranking, o quieres otro orden, acomódalos con las flechas de mejor a peor."}
+                  : "La lista va por ranking, y ese orden es la siembra. Si no tienes ranking, o quieres otro orden, acomódalos con las flechas de mejor a peor o con una votación."}
               </p>
               {t.siembraManual && t.jugadores.some((j) => j.rank > 0) && (
                 <div className="fila">
@@ -1066,6 +1237,27 @@ export function Juez({
                   <span className="idx">{i + 1}</span>
                   <span className="nom">{j.nombre}</span>
                   <span className="met">{[j.club, j.rank ? `rk ${j.rank}` : ""].filter(Boolean).join(" · ")}</span>
+                  {hc.activo && porBloque && !formal && (
+                    <select
+                      className="bloque-sel"
+                      value={j.bloque ?? 0}
+                      title="Bloque de nivel para el hándicap"
+                      aria-label={`Bloque de ${j.nombre}`}
+                      onChange={(e) =>
+                        cambiarEstructura((d) => {
+                          const x = d.jugadores.find((y) => y.id === j.id);
+                          if (x) x.bloque = Number(e.target.value) || undefined;
+                        })
+                      }
+                    >
+                      <option value={0}>sin bloque</option>
+                      {Array.from({ length: Math.max(kBloques, 1) + 1 }, (_, b) => (
+                        <option key={b} value={b + 1}>
+                          bloque {b + 1}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <span className="flechas">
                     <button className="x" title="Subir" disabled={i === 0} onClick={() => mover(j.id, -1)}>
                       ↑
@@ -1076,7 +1268,12 @@ export function Juez({
                   </span>
                   <button
                     className="x"
-                    title="Quitar"
+                    title={
+                      yaSeJuega
+                        ? "Con partidos ya jugados no se quita a nadie: si no se presenta, registra sus partidos como perdidos con «Corregir»"
+                        : "Quitar"
+                    }
+                    disabled={yaSeJuega}
                     onClick={() =>
                       cambiarEstructura((d) => {
                         d.jugadores = d.jugadores.filter((x) => x.id !== j.id);
@@ -1199,14 +1396,15 @@ export function Juez({
                 : "Reparte por siembra y trata de que no coincidan compañeros de club. Si no alcanza, lo dice y explica qué cedió."}
             </p>
             <div className="fila">
-              <button className="btn" onClick={() => hacerSorteo(true)}>
+              <button className="btn" disabled={yaSeJuega} onClick={() => hacerSorteo(true)}>
                 {todos ? "Armar el calendario" : "Sortear en la computadora"}
               </button>
-              <button className="btn leve" onClick={() => hacerSorteo(false)}>
+              <button className="btn leve" disabled={yaSeJuega} onClick={() => hacerSorteo(false)}>
                 {todos || t.siembraManual ? "En el orden de la lista" : "Repartir por ranking"}
               </button>
               <button
                 className="btn grave"
+                disabled={yaSeJuega}
                 onClick={() => {
                   if (!t.grupos.length || !confirm("Se borran los grupos y todos los partidos. ¿Seguir?")) return;
                   cambiarEstructura((d) => {
@@ -1220,6 +1418,7 @@ export function Juez({
                 Deshacer sorteo
               </button>
             </div>
+            {yaSeJuega && <p className="nota">{POR_QUE_FIJO}</p>}
             {t.semillaSorteo > 0 && (
               <div className="semilla">
                 <span className="eti">Sorteo generado con la semilla</span>
@@ -1249,7 +1448,7 @@ export function Juez({
                 </label>
               </div>
               <div className="fila">
-                <button className="btn leve" disabled={!Number(semilla)} onClick={() => hacerSorteo(true)}>
+                <button className="btn leve" disabled={!Number(semilla) || yaSeJuega} onClick={() => hacerSorteo(true)}>
                   Rehacer con esta semilla
                 </button>
               </div>
@@ -1297,9 +1496,9 @@ export function Juez({
                       <tr>
                         <th />
                         <th>Jugador</th>
-                        <th>PJ</th>
-                        <th>Sets</th>
-                        <th>Pts</th>
+                        <th title="Partidos jugados">Jugados</th>
+                        <th title="Sets ganados y perdidos">Sets</th>
+                        <th title="Puntos de la tabla: 2 por partido ganado y 1 por perdido">Puntos</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1351,7 +1550,7 @@ export function Juez({
                 const hechos = suyos.filter((p) => partidoListo(p, t.formatoGrupos, exigir)).length;
                 const descansa = t.grupos[0]?.jugadores.filter((id) => !suyos.some((p) => p.aId === id || p.bId === id));
                 return (
-                  <details key={j} className="ayuda jornada" open={hechos < suyos.length && hechos > 0}>
+                  <details key={j} className="ayuda jornada" open={hechos < suyos.length}>
                     <summary>
                       Jornada {j} · {hechos} de {suyos.length} jugados
                       {descansa?.length ? ` · descansa ${descansa.map(nom).join(", ")}` : ""}
@@ -1372,11 +1571,13 @@ export function Juez({
             <h2>Eliminatoria</h2>
             <p className="sub">Toma a los que avanzan de cada grupo y cruza primeros contra segundos.</p>
             <div className="fila">
-              <button className="btn" onClick={hacerCuadro}>
+              <button className="btn" disabled={llaveJugada} onClick={hacerCuadro}>
                 Armar cuadro
               </button>
               <button
                 className="btn grave"
+                disabled={llaveJugada}
+                title={llaveJugada ? "La eliminatoria ya tiene partidos anotados" : undefined}
                 onClick={() => {
                   if (!finales.length || !confirm("Se borra el cuadro y sus marcadores. ¿Seguir?")) return;
                   cambiarEstructura((d) => void (d.partidos = d.partidos.filter((p) => p.etapa !== "final")));

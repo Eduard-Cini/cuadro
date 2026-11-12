@@ -20,6 +20,15 @@ export const ETIQUETA: Record<Fase, string> = {
   validado: "validado",
 };
 
+/** «+3»: los puntos con que empieza cada set por hándicap. */
+export function Ventaja({ puntos }: { puntos: number }) {
+  return (
+    <b className="hc" title={`Hándicap: empieza cada set con ${puntos} ${puntos === 1 ? "punto" : "puntos"}`}>
+      +{puntos}
+    </b>
+  );
+}
+
 export function TarjetaPartido({ t, p, alAbrir, numero, extra }: Props) {
   const setsPara = p.etapa === "final" ? t.formatoFinales : t.formatoGrupos;
   const st = reducir(p, setsPara);
@@ -45,24 +54,32 @@ export function TarjetaPartido({ t, p, alAbrir, numero, extra }: Props) {
     >
       <div className="mesa">{numero ?? (p.mesa || "–")}</div>
       <div className="quien">
+        {/* El hándicap va pegado al nombre de quien lo recibe: es lo que
+            se pregunta al ver el calendario, «¿con cuántos empieza?». */}
         <div className="vs">
-          <span className={st.ganador === "a" ? "a gana" : "a"}>{nom(p.aId)}</span>
+          <span className={st.ganador === "a" ? "a gana" : "a"}>
+            {nom(p.aId)}
+            {st.ventaja.a > 0 && <Ventaja puntos={st.ventaja.a} />}
+          </span>
           <span className="sep">VS</span>
-          <span className={st.ganador === "b" ? "b gana" : "b"}>{nom(p.bId)}</span>
+          <span className={st.ganador === "b" ? "b gana" : "b"}>
+            {nom(p.bId)}
+            {st.ventaja.b > 0 && <Ventaja puntos={st.ventaja.b} />}
+          </span>
         </div>
         <div className="arb">
           <b className="etapa">{etiquetaEtapa(t, p)}</b>
           {arbitro ? ` · ${arbitro.nombre}` : " · sin árbitro"}
           {p.mesa ? ` · mesa ${p.mesa}` : ""}
-          {(st.ventaja.a > 0 || st.ventaja.b > 0) &&
-            ` · hándicap +${st.ventaja.a || st.ventaja.b} a ${nom(st.ventaja.a ? p.aId : p.bId)}`}
-          <span className={`sello ${st.fase}`}>{ETIQUETA[st.fase]}</span>
+          {/* Con dos versiones no hay un estado ni un marcador que mostrar: los dos juntos no significan nada. */}
+          {!st.conflicto && <span className={`sello ${st.fase}`}>{ETIQUETA[st.fase]}</span>}
           {st.corregido && <span className="sello corregido">corregido</span>}
           {st.porSets && <span className="sello corregido">anotado por sets</span>}
+          {st.conflicto && <span className="sello conflicto">dos versiones</span>}
         </div>
       </div>
       <div className="res">
-        {st.sets.a}–{st.sets.b}
+        {st.conflicto ? "¿?" : `${st.sets.a}–${st.sets.b}`}
       </div>
       {extra && <div className="acciones" onClick={(e) => e.stopPropagation()}>{extra}</div>}
     </div>

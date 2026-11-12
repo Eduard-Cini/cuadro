@@ -123,6 +123,12 @@ export const corrige = (sets: Array<{ a: number; b: number }>, nota: string, por
   nota,
 });
 export const tiempo = (lado: Lado, por: string): Evento => ({ ...firma(por), t: "tiempo", lado });
+export const elige = (fuente: string | null, nota: string, por: string): Evento => ({
+  ...firma(por),
+  t: "elige",
+  fuente,
+  nota,
+});
 export const resultado = (sets: Array<{ a: number; b: number }>, nota: string, por: string): Evento => ({
   ...firma(por),
   t: "resultado",

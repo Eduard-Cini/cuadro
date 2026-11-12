@@ -39,13 +39,23 @@ export interface Handicap {
    *  - `lugar`    de su lugar en la lista, del 1 al n: `porLugar` puntos
    *               por cada lugar de diferencia. No necesita ranking: basta
    *               con que el juez ordene la lista de mejor a peor.
+   *  - `bloque`   del bloque de nivel de cada uno (`Jugador.bloque`): los
+   *               del mismo bloque no se dan ventaja, y entre bloques la
+   *               da `tablaBloques`. Los bloques suelen salir de una
+   *               votación.
    *
    * Sin él vale `ranking`, que es como funcionaba antes de existir.
    */
-  base?: "ranking" | "lugar";
+  base?: "ranking" | "lugar" | "bloque";
   escalon: number;
   /** Puntos de ventaja por cada lugar de diferencia, con base `lugar`. */
   porLugar?: number;
+  /**
+   * Con base `bloque`: `tablaBloques[i][j]`, con i < j, son los puntos con
+   * que empieza cada set el del bloque j + 1 frente al del bloque i + 1
+   * (el bloque 1 es el más alto). Lo que falte se toma de lo sugerido.
+   */
+  tablaBloques?: number[][];
   tope: number;
 }
 
@@ -78,6 +88,21 @@ export interface Jugador {
   club: string;
   /** Mayor es mejor. 0 significa sin ranking. */
   rank: number;
+  /** Bloque de nivel para el hándicap por bloques: 1 es el más alto.
+      Sin él no recibe ni da ventaja. */
+  bloque?: number;
+}
+
+/**
+ * Un voto del ranking por votación: quién vota y su orden de las
+ * inscripciones, del mejor al peor. Un hueco ("") es un lugar que quedó
+ * sin llenar en la tabla.
+ */
+export interface Voto {
+  /** Puede ser alguien que no juega. */
+  quien: string;
+  /** Ids de inscripción. */
+  orden: string[];
 }
 
 /** Cómo se lee una inscripción: un nombre, o los dos de la pareja. */
@@ -137,6 +162,12 @@ export type Evento =
   | { id: string; t: "corrige"; sets: Array<{ a: number; b: number }>; nota: string; ts: number; por: string }
   | { id: string; t: "tiempo"; lado: Lado; ts: number; por: string }
   | { id: string; t: "resultado"; sets: Array<{ a: number; b: number }>; nota: string; ts: number; por: string }
+  /**
+   * El juez decide qué vale cuando dos aparatos anotaron el mismo partido.
+   * `fuente` es el aparato cuya versión cuenta; null, que las dos son el
+   * mismo partido y se juntan. Solo lo emite la mesa de control.
+   */
+  | { id: string; t: "elige"; fuente: string | null; nota: string; ts: number; por: string }
   | {
       id: string;
       t: "tarjeta";
@@ -215,6 +246,12 @@ export interface EstadoPartido {
   correccion: { por: string; nota: string; ts: number } | null;
   /** El resultado se escribió por sets, sin marcador punto a punto. */
   porSets: { por: string; nota: string; ts: number } | null;
+  /** Aparatos que anotaron este partido. Más de uno sin elección es un conflicto. */
+  fuentes: string[];
+  /** Dos aparatos anotaron el partido y el juez todavía no decide cuál vale. */
+  conflicto: boolean;
+  /** Lo que decidió el juez ante dos versiones, para el acta. */
+  eleccion: { fuente: string | null; por: string; nota: string; ts: number } | null;
   /** Ventaja de hándicap con que empieza cada set. */
   ventaja: { a: number; b: number };
   /** Primer y último evento con juego. Con esto se miden duraciones. */
@@ -290,6 +327,11 @@ export interface Torneo {
    * mejor: acomoda la lista y los de arriba se reparten como cabezas.
    */
   siembraManual?: boolean;
+  /**
+   * Los votos de la última votación que ordenó la lista. Se guardan al
+   * usar su resultado, para poder volver a ver las tablas.
+   */
+  votacion?: { votos: Voto[] };
   mesas: number;
   formatoGrupos: Formato;
   formatoFinales: Formato;

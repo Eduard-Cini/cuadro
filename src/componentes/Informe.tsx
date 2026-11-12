@@ -77,7 +77,7 @@ export function Informe({ t, alSalir }: Props) {
     .filter((p) => p.aId && p.bId)
     .map((p) => ({ p, st: reducir(p, setsDe(t, p)) }));
   const jugados = conEstado.filter((x) => x.st.terminado).sort((a, b) => (a.st.hasta ?? 0) - (b.st.hasta ?? 0));
-  const corregidos = conEstado.filter((x) => x.st.correccion);
+  const corregidos = conEstado.filter((x) => x.st.correccion || x.st.eleccion);
   /* Las tarjetas de toda la jornada, en el orden en que se sacaron. */
   const sanciones = conEstado
     .flatMap(({ p, st }) => st.tarjetas.map((x) => ({ p, x })))
@@ -196,7 +196,9 @@ export function Informe({ t, alSalir }: Props) {
                 <tr>
                   <th>Hándicap</th>
                   <td>
-                    {t.handicap.base === "lugar"
+                    {t.handicap.base === "bloque"
+                      ? `por bloques de nivel: sin ventaja dentro de un bloque y, entre bloques, la que fijó la mesa de control, hasta ${t.handicap.tope} por set`
+                      : t.handicap.base === "lugar"
                       ? `${t.handicap.porLugar ?? 1} puntos de ventaja por cada lugar de diferencia en la lista ordenada, hasta ${t.handicap.tope} por set`
                       : `un punto de ventaja por cada ${t.handicap.escalon} de diferencia de ranking, hasta ${t.handicap.tope} por set`}
                   </td>
@@ -301,12 +303,12 @@ export function Informe({ t, alSalir }: Props) {
                       <tr>
                         <th />
                         <th>{enParejas ? "Pareja" : "Jugador"}</th>
-                        <th>PJ</th>
-                        <th>PG</th>
-                        <th>PP</th>
+                        <th>Jugados</th>
+                        <th>Ganados</th>
+                        <th>Perdidos</th>
                         <th>Sets</th>
+                        <th>Tantos</th>
                         <th>Puntos</th>
-                        <th>Pts</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -338,7 +340,8 @@ export function Informe({ t, alSalir }: Props) {
               {todos
                 ? "La tabla decide el resultado final. "
                 : `Avanzan los ${t.clasifican} primeros de cada grupo, marcados con ✓. `}
-              Desempates por resultado directo entre los empatados, después por cociente de sets y de puntos.
+              «Sets» y «Tantos» van a favor y en contra; «Puntos» son los de la tabla: 2 por partido ganado y 1 por
+              perdido. Desempates por resultado directo entre los empatados, después por cociente de sets y de tantos.
             </p>
           </section>
         )}
@@ -451,9 +454,9 @@ export function Informe({ t, alSalir }: Props) {
                     <td className="marcador">
                       {st.sets.a}–{st.sets.b}
                     </td>
-                    <td>{st.correccion ? autorDe(t, st.correccion.por).nombre : "—"}</td>
-                    <td>{st.correccion?.nota || "—"}</td>
-                    <td>{hora(st.correccion?.ts ?? null)}</td>
+                    <td>{autorDe(t, (st.correccion ?? st.eleccion)!.por).nombre}</td>
+                    <td>{(st.correccion ?? st.eleccion)?.nota || "—"}</td>
+                    <td>{hora((st.correccion ?? st.eleccion)?.ts ?? null)}</td>
                   </tr>
                 ))}
               </tbody>

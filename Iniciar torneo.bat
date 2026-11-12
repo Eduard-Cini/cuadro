@@ -1,7 +1,7 @@
 @echo off
 rem  UTF-8 en la consola, para que los acentos del servidor no salgan rotos.
 chcp 65001 > nul
-title TTorneo - torneo en marcha
+title TTorneo - iniciando
 cd /d "%~dp0"
 
 rem  Este archivo va sin acentos ni caracteres de caja a proposito: cmd.exe
@@ -22,7 +22,7 @@ where node >nul 2>nul
 if errorlevel 1 (
   echo   No se encuentra Node.js en esta computadora.
   echo.
-  echo   Cuadro lo necesita para servir la aplicacion a las tablets.
+  echo   TTorneo lo necesita para servir la aplicacion a las tablets.
   echo   Se descarga gratis de https://nodejs.org  ^(elige la version LTS^)
   echo   Cuando lo hayas instalado, vuelve a hacer doble clic aqui.
   echo.
@@ -46,18 +46,19 @@ if not exist "dist\index.html" (
   echo.
 )
 
-rem  Abrir el navegador un poco despues de arrancar el servidor: si se abre
-rem  antes, encuentra la puerta cerrada y muestra un error que no lo es.
-start "" /b cmd /c "timeout /t 4 > nul & start "" http://localhost:8080/"
+rem  El relevo se abre en una consola clasica de Windows y no en Windows
+rem  Terminal: en la clasica se le puede quitar el boton de cerrar, para que
+rem  nadie la cierre sin querer a media jornada. El propio relevo abre el
+rem  navegador cuando ya esta escuchando.
+if exist "%SystemRoot%\System32\conhost.exe" (
+  start "" "%SystemRoot%\System32\conhost.exe" cmd.exe /c ""%~dp0servidor\relevo.bat""
+  echo   El torneo se abrio en una ventana aparte, titulada
+  echo   "TTorneo - NO CERRAR". Esa ventana es el torneo: dejala abierta.
+  echo.
+  echo   Esta ventana se cierra sola en unos segundos.
+  timeout /t 8 > nul
+  exit /b 0
+)
 
-echo   Se abrira el navegador. Pulsa "Abrir la mesa de control aqui".
-echo.
-echo   DEJA ESTA VENTANA ABIERTA mientras se juega.
-echo   Al cerrarla se termina el torneo.
-echo.
-
-node servidor\relevo.mjs --puerto 8080
-
-echo.
-echo   El torneo se ha detenido.
-pause
+rem  Sin consola clasica (no deberia pasar en Windows 10 u 11), aqui mismo.
+call "%~dp0servidor\relevo.bat"

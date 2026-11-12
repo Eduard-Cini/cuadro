@@ -40,6 +40,17 @@ export function ventajaEntre(
   if (!h?.activo || t.reglamento === "formal" || !aId || !bId) return undefined;
   const tope = Math.max(0, Math.min(puntosDe(t) - 2, Number(h.tope) || 0));
 
+  if (h.base === "bloque") {
+    const a = t.jugadores.find((j) => j.id === aId)?.bloque;
+    const b = t.jugadores.find((j) => j.id === bId)?.bloque;
+    // Sin bloque no se calcula, y entre los del mismo bloque no hay ventaja
+    if (!a || !b || a === b) return undefined;
+    const puntos = Math.min(tope, ventajaEntreBloques(h.tablaBloques, Math.min(a, b), Math.max(a, b), puntosDe(t)));
+    if (puntos <= 0) return undefined;
+    // El del bloque de abajo (número mayor) es quien recibe la ventaja
+    return { lado: a > b ? "a" : "b", puntos };
+  }
+
   if (h.base === "lugar") {
     const orden = enOrdenDeSiembra(t);
     const ia = orden.findIndex((j) => j.id === aId);
@@ -59,6 +70,51 @@ export function ventajaEntre(
   const puntos = Math.min(tope, Math.floor(Math.abs(a.rank - b.rank) / escalon));
   if (puntos <= 0) return undefined;
   return { lado: a.rank < b.rank ? "a" : "b", puntos };
+}
+
+/**
+ * Ventaja que se propone entre dos bloques separados por `d` (1 si son
+ * vecinos), con sets a `meta` puntos.
+ *
+ * Con sets a 11 se propone 2, 4, 5, 6, 7… La razón, con un modelo simple:
+ * si el mejor gana cada punto con probabilidad p, sin ventaja necesita 11
+ * de los primeros 21 puntos; con h de ventaja para el otro, 11 de los
+ * primeros 21 − h. El set queda parejo cuando lo que espera ganar en esos
+ * puntos es 10.5, o sea con h ≈ 21 − 10.5 / p. Eso da h ≈ 2 para p = 0.55,
+ * 3.5 para 0.60, 5 para 0.65, 6 para 0.70 y 7 para 0.75: cada punto de
+ * diferencia en el nivel pide menos ventaja que el anterior, y por eso la
+ * escala crece cada vez más despacio en lugar de ir de dos en dos. Se
+ * empieza bajo a propósito: la votación es una primera estimación, y una
+ * ventaja de más hace que el mejor pierda sin haber jugado mal, que es
+ * peor experiencia que un partido algo cargado. Con sets a otra cantidad
+ * se escala en proporción.
+ */
+export function ventajaSugerida(d: number, meta: number = PUNTOS_SET): number {
+  if (d <= 0) return 0;
+  const base = d === 1 ? 2 : d === 2 ? 4 : 2 + d;
+  return Math.round((base * meta) / PUNTOS_SET);
+}
+
+/** La tabla sugerida para k bloques: `tabla[i][j]` con i < j, cero en lo demás. */
+export function tablaSugerida(k: number, meta: number = PUNTOS_SET): number[][] {
+  return Array.from({ length: k }, (_, i) =>
+    Array.from({ length: k }, (_, j) => (j > i ? ventajaSugerida(j - i, meta) : 0)),
+  );
+}
+
+/**
+ * Los puntos que da el bloque `alto` al bloque `bajo` (alto < bajo,
+ * contando desde 1): lo que diga la tabla del juez, o lo sugerido si esa
+ * casilla no está.
+ */
+export function ventajaEntreBloques(
+  tabla: number[][] | undefined,
+  alto: number,
+  bajo: number,
+  meta: number = PUNTOS_SET,
+): number {
+  const v = tabla?.[alto - 1]?.[bajo - 1];
+  return typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.floor(v)) : ventajaSugerida(bajo - alto, meta);
 }
 
 /**

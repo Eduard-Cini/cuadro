@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { podio } from "./cuadro";
+import { estadisticas } from "./clasificacion";
 import { pasos } from "./guia";
 import { aplicarHandicap, aplicarReglas, puntosDe, ventajaEntre } from "./handicap";
 import { mesasDestino, moverDeMesa, quitarDeMesa } from "./asignacion";
 import { actividadPorAutor, autorDe, deshechosDe, mesaDondeSeJugo, quienDirigio } from "./actividad";
-import { reducir, revisarParciales } from "./reglas";
+import { partidoListo, reducir, revisarParciales } from "./reglas";
 import { calendarioCircular, sortear } from "./sorteo";
 import { aplicarPaquete } from "./sincronizacion";
 import type { Evento, Jugador, Lado, Partido, Torneo } from "./tipos";
@@ -485,5 +486,76 @@ describe("actividad leída del registro", () => {
     expect(autorDe(t, "juez").nombre).toBe("Mesa de control");
     expect(autorDe(t, "autogestion:d1:Luis").nombre).toBe("Mesa autogestionada · Luis");
     expect(autorDe(t, "d-abc123").tipo).toBe("aparato");
+  });
+});
+
+/* ---------- el mismo partido anotado por dos aparatos ---------- */
+
+describe("dos aparatos con el mismo partido", () => {
+  const A = "autogestion:d1:Luis";
+  const B = "autogestion:d2:Ana";
+  const conDos = (): Partido => {
+    const p: Partido = { id: "dup", etapa: "grupo", aId: "x", bId: "y", grupoId: "g", mesa: 0, orden: 0, eventos: [] };
+    ganar(p, "a", 2, A);
+    ganar(p, "b", 2, B);
+    return p;
+  };
+
+  it("queda en conflicto y no cuenta para la tabla", () => {
+    const p = conDos();
+    const st = reducir(p, 2);
+    expect(st.fuentes).toEqual(["autogestion:d1", "autogestion:d2"]);
+    expect(st.conflicto).toBe(true);
+    expect(partidoListo(p, 2)).toBe(false);
+    const filas = estadisticas(["x", "y"], [p], 2);
+    expect(filas.x.pj).toBe(0);
+  });
+
+  it("si el juez elige una versión, solo cuentan los puntos de esa", () => {
+    const p = conDos();
+    p.eventos.push(ev({ t: "elige", fuente: "autogestion:d2", nota: "Vale la de Ana" }, "juez"));
+    const st = reducir(p, 2);
+    expect(st.conflicto).toBe(false);
+    expect(st.ganador).toBe("b");
+    expect(st.sets).toEqual({ a: 0, b: 2 });
+    expect(st.eleccion?.nota).toBe("Vale la de Ana");
+    expect(partidoListo(p, 2)).toBe(true);
+  });
+
+  it("si eran partes del mismo partido, se juntan", () => {
+    const p: Partido = { id: "mitad", etapa: "grupo", aId: "x", bId: "y", mesa: 0, orden: 0, eventos: [] };
+    for (let i = 0; i < 11; i++) p.eventos.push(punto("a", A));
+    p.eventos.push(ev({ t: "reanuda" }, B));
+    for (let i = 0; i < 11; i++) p.eventos.push(punto("a", B));
+    expect(reducir(p, 2).conflicto).toBe(true);
+    p.eventos.push(ev({ t: "elige", fuente: null, nota: "Cambió de teléfono" }, "juez"));
+    expect(reducir(p, 2)).toMatchObject({ conflicto: false, ganador: "a", sets: { a: 2, b: 0 } });
+  });
+
+  it("cambiar de nombre en el mismo aparato no crea otra versión", () => {
+    const p: Partido = { id: "uno", etapa: "grupo", aId: "x", bId: "y", mesa: 0, orden: 0, eventos: [] };
+    p.eventos.push(punto("a", "autogestion:d1:Luis"), punto("a", "autogestion:d1:Luis Pérez"));
+    expect(reducir(p, 2).fuentes).toEqual(["autogestion:d1"]);
+    expect(reducir(p, 2).conflicto).toBe(false);
+  });
+
+  it("mientras no elige, se ve la primera versión que llegó", () => {
+    const st = reducir(conDos(), 2);
+    expect(st.conflicto).toBe(true);
+    expect(st.sets).toEqual({ a: 2, b: 0 });
+  });
+
+  it("si el juez termina un partido que empezó un árbitro, no hay dos versiones", () => {
+    const p: Partido = { id: "rel", etapa: "grupo", aId: "x", bId: "y", mesa: 0, orden: 0, eventos: [] };
+    for (let i = 0; i < 11; i++) p.eventos.push(punto("a", "arbitro-1"));
+    for (let i = 0; i < 11; i++) p.eventos.push(punto("a", "juez"));
+    expect(reducir(p, 2)).toMatchObject({ conflicto: false, ganador: "a", sets: { a: 2, b: 0 } });
+  });
+
+  it("validar y corregir de la mesa de control no cuentan como otra versión", () => {
+    const p: Partido = { id: "ok", etapa: "grupo", aId: "x", bId: "y", mesa: 0, orden: 0, eventos: [] };
+    ganar(p, "a", 2, "arbitro-1");
+    p.eventos.push(ev({ t: "valida" }, "juez"));
+    expect(reducir(p, 2)).toMatchObject({ conflicto: false, fase: "validado" });
   });
 });

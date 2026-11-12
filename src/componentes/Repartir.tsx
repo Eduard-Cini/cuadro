@@ -73,6 +73,12 @@ export function Repartir({ origen, arbitros, conexion, credencial, publico, alSa
     else setNota(r.detalle);
   }
 
+  /* De uno en uno: las peticiones firmadas llevan un contador que no puede
+     repetirse, y mandarlas a la vez las desordena. */
+  async function invitarATodos() {
+    for (const a of arbitros) if (!codigos[a.id]) await invitar(a);
+  }
+
   return (
     <div className="repartir">
       <header className="rp-top">
@@ -122,6 +128,13 @@ export function Repartir({ origen, arbitros, conexion, credencial, publico, alSa
             Cada código sirve una vez y caduca en un cuarto de hora. El QR lleva dentro la dirección y el código: quien
             lo escanea entra ya identificado, con su mesa puesta.
           </p>
+          {enRed && arbitros.length > 1 && arbitros.some((a) => !codigos[a.id]) && (
+            <div className="fila">
+              <button className="btn" onClick={() => void invitarATodos()}>
+                Generar los códigos de todos
+              </button>
+            </div>
+          )}
           {!enRed && (
             <p className="nota mal">
               Esta tablet tiene que estar dada de alta como mesa de control para poder repartir códigos.

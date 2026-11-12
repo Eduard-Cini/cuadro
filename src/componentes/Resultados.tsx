@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { nombreDe, reducir, setsDe } from "../nucleo";
+import { DE_JUEGO, autorDe, fuenteDe, nombreDe, reducir, setsDe } from "../nucleo";
 import type { Evento, Partido, Torneo } from "../nucleo";
-import { corrige, valida } from "../almacen";
+import { corrige, elige, valida } from "../almacen";
 import { TarjetaPartido } from "./TarjetaPartido";
 
 interface Props {
@@ -55,10 +55,40 @@ export function Resultados({ t, anotarEn, cambiarEstructura, alAbrir, quien }: P
     .filter((p) => p.aId && p.bId)
     .map((p) => ({ p, st: reducir(p, setsDe(t, p)) }));
 
-  const porValidar = conEstado.filter((x) => x.st.fase === "por-validar");
+  const enConflicto = conEstado.filter((x) => x.st.conflicto);
+  const porValidar = conEstado.filter((x) => x.st.fase === "por-validar" && !x.st.conflicto);
   const listos = conEstado
-    .filter((x) => x.st.fase === "validado" || (x.st.terminado && !t.validacionObligatoria))
+    .filter((x) => !x.st.conflicto && (x.st.fase === "validado" || (x.st.terminado && !t.validacionObligatoria)))
     .sort((x, y) => (y.st.hasta ?? 0) - (x.st.hasta ?? 0));
+
+  /**
+   * Las versiones de un partido que anotaron dos aparatos.
+   *
+   * Cada una se calcula con los eventos de juego de su aparato nada más,
+   * como si el otro no existiera. Así el juez compara lo que dice cada
+   * quien antes de decidir.
+   */
+  const versiones = (p: Partido) => {
+    const st = reducir(p, setsDe(t, p));
+    return st.fuentes.map((f) => {
+      const suyos = p.eventos.filter((ev) => !DE_JUEGO.has(ev.t) || ev.por === "juez" || fuenteDe(ev.por) === f);
+      const v = reducir({ ...p, eventos: suyos }, setsDe(t, p));
+      const primero = p.eventos.find((ev) => DE_JUEGO.has(ev.t) && fuenteDe(ev.por) === f);
+      return {
+        fuente: f,
+        quien: autorDe(t, primero?.por ?? f).nombre,
+        st: v,
+        eventos: suyos.filter((ev) => DE_JUEGO.has(ev.t)).length,
+      };
+    });
+  };
+
+  /** El juez decide: una versión, o las dos juntas si eran el mismo partido. */
+  const decidir = (p: Partido, fuente: string | null, como: string) => {
+    anotarEn(p.id, elige(fuente, como, quien));
+    const st = reducir({ ...p, eventos: [...p.eventos, elige(fuente, como, quien)] }, setsDe(t, p));
+    if (st.terminado) aceptar(p.id);
+  };
 
   function abrirCorreccion(p: Partido) {
     const st = reducir(p, setsDe(t, p));
@@ -157,6 +187,50 @@ export function Resultados({ t, anotarEn, cambiarEstructura, alAbrir, quien }: P
         </p>
       </div>
 
+      {enConflicto.length > 0 && (
+        <div className="sec compacta">
+          <h3 className="sub-titulo">
+            Partidos anotados por dos aparatos <b className="cuenta">{enConflicto.length}</b>
+          </h3>
+          <p className="sub">
+            Dos aparatos anotaron el mismo partido. No cuenta para la tabla hasta que decidas cuál versión vale. La
+            otra queda en el registro, sin efecto.
+          </p>
+        </div>
+      )}
+      {enConflicto.map(({ p }) => (
+        <div key={p.id} className="conflicto">
+          <TarjetaPartido t={t} p={p} alAbrir={alAbrir} />
+          <div className="versiones">
+            {versiones(p).map((v) => (
+              <div key={v.fuente} className="version">
+                <b>{v.quien}</b>
+                <span className="marcador">
+                  {v.st.sets.a}–{v.st.sets.b}
+                  {v.st.terminado ? "" : " · sin terminar"}
+                </span>
+                <span className="detalle-sets">
+                  {v.st.historial.length ? v.st.historial.map((x) => `${x.a}-${x.b}`).join(", ") : "sin sets cerrados"}
+                  {` · ${v.eventos} anotaciones`}
+                </span>
+                <button className="btn chico" onClick={() => decidir(p, v.fuente, `Vale la versión de ${v.quien}`)}>
+                  Vale esta
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="fila">
+            <button
+              className="btn chico leve"
+              onClick={() => decidir(p, null, "Las versiones eran partes del mismo partido y se juntaron")}
+              title="Por ejemplo, si el árbitro cambió de teléfono a medio partido"
+            >
+              Son partes del mismo partido: juntarlas
+            </button>
+          </div>
+        </div>
+      ))}
+
       <div className="sec compacta">
         <h3 className="sub-titulo">
           Esperando tu visto bueno {porValidar.length > 0 && <b className="cuenta">{porValidar.length}</b>}
@@ -215,9 +289,12 @@ export function Resultados({ t, anotarEn, cambiarEstructura, alAbrir, quien }: P
           {corrigiendo === p.id && editor(p)}
           {st.correccion && corrigiendo !== p.id && (
             <p className="detalle-sets aviso-corr">
-              Corregido por {st.correccion.por}
+              Corregido por {autorDe(t, st.correccion.por).nombre}
               {st.correccion.nota ? `: ${st.correccion.nota}` : "."}
             </p>
+          )}
+          {st.eleccion && !st.correccion && corrigiendo !== p.id && (
+            <p className="detalle-sets aviso-corr">Tenía dos versiones. {st.eleccion.nota}.</p>
           )}
         </div>
       ))}

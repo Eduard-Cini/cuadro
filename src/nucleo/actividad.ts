@@ -1,6 +1,6 @@
-import { ordenar, reducir } from "./reglas";
+import { DE_JUEGO, ordenar, reducir } from "./reglas";
 import { setsDe } from "./asignacion";
-import type { Evento, Lado, Partido, Torneo } from "./tipos";
+import type { Lado, Partido, Torneo } from "./tipos";
 
 /*
  * Qué hizo cada quien, leído del registro de eventos.
@@ -12,8 +12,6 @@ import type { Evento, Lado, Partido, Torneo } from "./tipos";
  * qué se deshizo, con su hora.
  */
 
-/** Los eventos que hace quien lleva el marcador, no la mesa de control. */
-const DE_JUEGO = new Set<Evento["t"]>(["inicia", "punto", "anula", "reanuda", "cierra", "tiempo", "tarjeta", "resultado"]);
 
 export interface Autor {
   /** Lo que va en `por` de cada evento. */

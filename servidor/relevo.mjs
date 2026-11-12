@@ -25,6 +25,7 @@
  *   node servidor/relevo.mjs [--puerto 8080] [--datos datos] [--nuevo-juez]
  */
 
+import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { createHmac, createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { createReadStream, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
@@ -49,6 +50,40 @@ const CARPETA = resolve(AQUI, opcion("datos", "datos"));
 const ESTATICO = resolve(AQUI, opcion("sitio", "dist"));
 const RESPALDO = join(CARPETA, "torneo.json");
 const ACCESOS = join(CARPETA, "accesos.json");
+const RED = join(CARPETA, "red.json");
+
+/*
+ * La dirección de la computadora en la red puede cambiar de un día a otro:
+ * la asigna el router. Cada teléfono guarda su alta según la dirección con
+ * la que entró, así que con una dirección nueva hay que volver a repartir
+ * los códigos. El relevo recuerda la de la vez anterior y, si cambió, se lo
+ * dice al juez hasta que confirme que ya los repartió.
+ */
+let cambioDireccion = null;
+
+function guardarRed(ahora) {
+  try {
+    mkdirSync(CARPETA, { recursive: true });
+    writeFileSync(RED, JSON.stringify({ direccion: ahora, anterior: cambioDireccion?.antes ?? null, pendiente: !!cambioDireccion }));
+  } catch {
+    /* sin disco no hay aviso, pero el torneo sigue */
+  }
+}
+
+function revisarDireccion(ahora) {
+  if (!ahora) return;
+  let previo = null;
+  try {
+    previo = JSON.parse(readFileSync(RED, "utf8"));
+  } catch {
+    /* primera vez en esta carpeta */
+  }
+  if (previo?.pendiente && previo.anterior) cambioDireccion = { antes: previo.anterior, ahora };
+  else if (previo?.direccion && previo.direccion !== ahora) cambioDireccion = { antes: previo.direccion, ahora };
+  // Si volvió a la de antes, no hay nada que repartir.
+  if (cambioDireccion && cambioDireccion.antes === ahora) cambioDireccion = null;
+  guardarRed(ahora);
+}
 
 /**
  * Dónde se guarda una categoría que no está abierta.
@@ -213,10 +248,48 @@ function recuperarCategoria(id) {
 }
 
 let pendiente = null;
-/** Escribe a disco, pero no en cada punto: agrupa un segundo. */
+let ultimaEscritura = 0;
+/**
+ * Escribe a disco: lo primero al instante, y las ráfagas, agrupadas.
+ *
+ * Antes todo esperaba un segundo, y cerrar la ventana en ese segundo
+ * dejaba lo último fuera del disco. Ahora un cambio que llega tras un rato
+ * de calma —un punto, un alta, una estructura— se escribe en el momento, y
+ * solo los que llegan pegados se juntan en una escritura un segundo
+ * después: con seis tablets anotando a la vez no se reescribe el archivo
+ * cien veces por segundo.
+ */
 function respaldar() {
   if (pendiente) return;
-  pendiente = setTimeout(() => {
+  const espera = 1000 - (Date.now() - ultimaEscritura);
+  if (espera <= 0) escribirRespaldo();
+  else pendiente = setTimeout(escribirRespaldo, espera);
+}
+
+/*
+ * Al cerrarse, lo que esté esperando su segundo se escribe ya.
+ *
+ * Cerrar la ventana negra, Ctrl+C o «Terminar el torneo» paraban el
+ * proceso con la última escritura pendiente: hasta un segundo de puntos
+ * quedaba solo en las tablets. Ellas lo vuelven a mandar al reconectar,
+ * pero el respaldo del disco no debería depender de eso.
+ */
+function guardarYSalir(codigo = 0) {
+  if (pendiente) escribirRespaldo();
+  process.exit(codigo);
+}
+for (const senal of ["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"]) {
+  try {
+    process.on(senal, () => guardarYSalir(0));
+  } catch {
+    /* esa señal no existe en este sistema */
+  }
+}
+
+function escribirRespaldo() {
+  if (pendiente) clearTimeout(pendiente);
+  ultimaEscritura = Date.now();
+  {
     pendiente = null;
     try {
       mkdirSync(CARPETA, { recursive: true });
@@ -235,7 +308,7 @@ function respaldar() {
     } catch (e) {
       console.error("  No se pudo respaldar:", e.message);
     }
-  }, 1000);
+  }
 }
 
 function avisar() {
@@ -268,7 +341,7 @@ const esDeAqui = (req) => {
 };
 
 const TIPOS_DE_ARBITRO = new Set(["inicia", "punto", "anula", "reanuda", "cierra", "tiempo", "tarjeta", "resultado"]);
-const TIPOS_DE_JUEZ = new Set(["valida", "corrige"]);
+const TIPOS_DE_JUEZ = new Set(["valida", "corrige", "elige"]);
 
 /**
  * Comprueba que quien manda esto es quien dice ser.
@@ -541,6 +614,8 @@ async function api(req, res, url) {
       // control dada de alta, entrar otra vez la sustituye, y la aplicación
       // lo pregunta antes.
       altaLocalDisponible: esDeAqui(req),
+      // Mientras el juez no confirme que volvió a repartir los códigos.
+      cambioDireccion,
     });
   }
 
@@ -706,8 +781,15 @@ async function api(req, res, url) {
     console.log("  Los datos quedan guardados en " + CARPETA);
     console.log("  Ya puedes cerrar esta ventana.");
     console.log("");
-    setTimeout(() => process.exit(0), 300);
+    setTimeout(() => guardarYSalir(0), 300);
     return;
+  }
+
+  if (ruta === "/api/direccion-vista" && req.method === "POST") {
+    if (cred.papel !== "juez") return responder(res, 403, { error: "solo el juez" });
+    cambioDireccion = null;
+    guardarRed(direcciones()[0]);
+    return responder(res, 200, { ok: true });
   }
 
   if (ruta === "/api/acceso" && req.method === "GET") {
@@ -966,6 +1048,8 @@ function entradasDelPaquete() {
   out.push({ nombre: "TTorneo/servidor/relevo.mjs", datos: readFileSync(fileURLToPath(import.meta.url)) });
   const lanzador = join(AQUI, "Iniciar torneo.bat");
   if (existsSync(lanzador)) out.push({ nombre: "TTorneo/Iniciar torneo.bat", datos: readFileSync(lanzador) });
+  const ventana = join(AQUI, "servidor", "relevo.bat");
+  if (existsSync(ventana)) out.push({ nombre: "TTorneo/servidor/relevo.bat", datos: readFileSync(ventana) });
   out.push({ nombre: "TTorneo/LEEME.txt", datos: Buffer.from(LEEME, "utf8") });
   return out;
 }
@@ -1008,8 +1092,51 @@ if (!acceso.credenciales.has("juez") || bandera("nuevo-juez")) {
   acceso.codigoJuez = codigoLegible();
 }
 
+/*
+ * Que no se cierre la ventana por accidente.
+ *
+ * Cerrar la ventana del relevo no borra nada, pero deja a las tablets sin
+ * mesa de control hasta que alguien la vuelva a abrir. El lanzador abre el
+ * relevo en una consola clásica de Windows, y aquí se le quita el botón de
+ * cerrar: para terminar quedan Ctrl+C o «Terminar el torneo» en la mesa de
+ * control. En Windows Terminal esto no tiene efecto (ahí la ventana es de
+ * otro programa), y por eso el lanzador no lo usa.
+ */
+function protegerVentana() {
+  if (process.platform !== "win32" || !bandera("proteger-ventana")) return;
+  const ps =
+    "Add-Type -Namespace TT -Name V -MemberDefinition '" +
+    '[DllImport("kernel32.dll")] public static extern System.IntPtr GetConsoleWindow();' +
+    '[DllImport("user32.dll")] public static extern System.IntPtr GetSystemMenu(System.IntPtr h, bool r);' +
+    '[DllImport("user32.dll")] public static extern bool DeleteMenu(System.IntPtr m, uint p, uint f);' +
+    '[DllImport("user32.dll")] public static extern bool DrawMenuBar(System.IntPtr h);' +
+    "'; $h = [TT.V]::GetConsoleWindow(); if ($h -ne [System.IntPtr]::Zero) { " +
+    "$m = [TT.V]::GetSystemMenu($h, $false); [void][TT.V]::DeleteMenu($m, 0xF060, 0); [void][TT.V]::DrawMenuBar($h) }";
+  try {
+    const p = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", ps], { stdio: "ignore" });
+    p.on("error", () => {});
+  } catch {
+    /* sin PowerShell queda solo el aviso escrito */
+  }
+}
+
+/* El lanzador pide abrir el navegador cuando el relevo ya escucha, y no
+   antes: si se abre antes, encuentra la puerta cerrada. */
+function abrirNavegador() {
+  if (process.platform !== "win32" || !bandera("abrir")) return;
+  try {
+    const p = spawn("cmd.exe", ["/c", "start", "", `http://localhost:${PUERTO}/`], { stdio: "ignore", detached: true });
+    p.on("error", () => {});
+    p.unref();
+  } catch {
+    /* que abran el navegador a mano */
+  }
+}
+
 servidor.listen(PUERTO, () => {
   const ips = direcciones();
+  revisarDireccion(ips[0]);
+  protegerVentana();
   // Marco en ASCII a propósito: las consolas de Windows no siempre están
   // en UTF-8, y un banner con caracteres de caja aparece destrozado justo
   // en la máquina del gimnasio, que es donde nadie va a arreglarlo.
@@ -1035,6 +1162,20 @@ servidor.listen(PUERTO, () => {
     console.log(`  Si se perdió: abre http://localhost:${PUERTO} en esta computadora, elige`);
     console.log("  «Mesa de control» y pulsa «Recuperar la mesa de control aquí».");
   }
+  if (cambioDireccion) {
+    console.log("\n  !! LA DIRECCION DE ESTA COMPUTADORA CAMBIO");
+    console.log(`     Antes: ${cambioDireccion.antes}   Ahora: ${cambioDireccion.ahora}`);
+    console.log("     Los telefonos que ya estaban dados de alta tienen que volver a");
+    console.log("     escanear su codigo QR. La mesa de control lo avisa y los genera.");
+  }
   console.log("\n  Los resultados solo los acepta de un árbitro dado de alta y");
-  console.log("  para su propia mesa. Validar y corregir, solo el juez.\n");
+  console.log("  para su propia mesa. Validar y corregir, solo el juez.");
+  console.log("\n  ##################################################");
+  console.log("  ##   NO CIERRES ESTA VENTANA MIENTRAS SE JUEGA   ##");
+  console.log("  ##################################################");
+  console.log("  Si se cierra no se pierde nada, pero las tablets se quedan sin");
+  console.log("  mesa de control hasta que vuelvas a abrir Iniciar torneo.");
+  console.log("  Para terminar: en la mesa de control, Red > Terminar el torneo,");
+  console.log("  o aqui mismo con Ctrl+C.\n");
+  abrirNavegador();
 });
