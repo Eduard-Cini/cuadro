@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { setsDe } from "./asignacion";
 import { armarCuadro, ordenDeSiembra, propagar } from "./cuadro";
 import type { Grupo, Partido } from "./tipos";
 
@@ -102,5 +103,30 @@ describe("propagar con descansos", () => {
     expect([f[4].aId, f[4].bId]).toEqual(["A", null]);
     expect([f[5].aId, f[5].bId]).toEqual(["D", null]);
     expect([f[6].aId, f[6].bId]).toEqual([null, null]);
+  });
+});
+
+describe("semis y final a más sets", () => {
+  const p = (ronda: number, slot: number): Partido =>
+    ({ id: `r${ronda}s${slot}`, etapa: "final", ronda, slot, aId: null, bId: null, mesa: 0, orden: 0, eventos: [] }) as Partido;
+  const partidos = [p(0, 0), p(0, 1), p(0, 2), p(0, 3), p(1, 0), p(1, 1), p(2, 0)];
+
+  it("cuartos con el formato de la llave; semis y final con el suyo", () => {
+    const t = { partidos, formatoGrupos: 2, formatoFinales: 2 as const, formatoSemis: 3 as const };
+    expect(partidos.map((x) => setsDe(t, x))).toEqual([2, 2, 2, 2, 3, 3, 3]);
+  });
+
+  it("sin el ajuste, toda la llave igual", () => {
+    const t = { partidos, formatoGrupos: 2, formatoFinales: 2 as const };
+    expect(partidos.map((x) => setsDe(t, x))).toEqual([2, 2, 2, 2, 2, 2, 2]);
+  });
+
+  it("un cuarto ganado 2-0 sigue contando aunque las semis vayan a 3 de 5", () => {
+    const f = partidos.map((x) => ({ ...x }));
+    f[0].aId = "A"; f[0].bId = "B";
+    f[0].eventos = [{ id: "r", t: "resultado", sets: [{ a: 11, b: 5 }, { a: 11, b: 7 }], ts: 1, por: "juez" }] as Partido["eventos"];
+    const t = { partidos: f, formatoGrupos: 2, formatoFinales: 2 as const, formatoSemis: 3 as const };
+    propagar(f, (x) => setsDe(t, x));
+    expect(f[4].aId).toBe("A");
   });
 });

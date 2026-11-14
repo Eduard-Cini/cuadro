@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { reducir } from "../nucleo";
+import { reducir, setsDe } from "../nucleo";
 import type { Credencial, Partido, Torneo } from "../nucleo";
 import type { Conexion } from "../red";
 import { Conectar } from "./Conectar";
@@ -55,7 +55,7 @@ export function Arbitro({
   const yo = t.arbitros.find((a) => a.id === arbitroId) ?? null;
   const miMesa = yo?.mesa ?? mesa;
 
-  const setsPara = (p: Partido) => (p.etapa === "final" ? t.formatoFinales : t.formatoGrupos);
+  const setsPara = (p: Partido) => setsDe(t, p);
   const mios =
     miMesa == null
       ? []

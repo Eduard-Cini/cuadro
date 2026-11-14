@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { aplicarHandicap, aplicarPaquete, aplicarReglas, propagar, unir } from "./nucleo";
+import { aplicarHandicap, aplicarPaquete, aplicarReglas, propagar, setsDe, unir } from "./nucleo";
 import type { Credencial, Evento, Lado, Torneo } from "./nucleo";
 import {
   LLAVE_ANOTADOR,
@@ -377,18 +377,18 @@ export default function App() {
     const finales = t.partidos.filter((p) => p.etapa === "final");
     if (!finales.length) return;
     const copia = structuredClone(finales);
-    propagar(copia, t.formatoFinales, t.validacionObligatoria);
+    propagar(copia, (p) => setsDe(t, p), t.validacionObligatoria);
     const movio = copia.some((p, i) => p.aId !== finales[i].aId || p.bId !== finales[i].bId);
     if (!movio) return;
     if (rol === "juez") {
-      cambiarEstructura((d) => propagar(d.partidos.filter((p) => p.etapa === "final"), d.formatoFinales, d.validacionObligatoria));
+      cambiarEstructura((d) => propagar(d.partidos.filter((p) => p.etapa === "final"), (p) => setsDe(d, p), d.validacionObligatoria));
     } else {
       // La mesa autogestionada también ve avanzar el cuadro, para saber
       // qué se juega después, pero sin subir la revisión: la estructura
       // sigue siendo del juez, y él llega a la misma al recibir los
       // resultados porque el avance sale solo de quién ganó.
       actualizar((d) => {
-        propagar(d.partidos.filter((p) => p.etapa === "final"), d.formatoFinales, d.validacionObligatoria);
+        propagar(d.partidos.filter((p) => p.etapa === "final"), (p) => setsDe(d, p), d.validacionObligatoria);
         aplicarHandicap(d);
       });
     }

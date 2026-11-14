@@ -1,4 +1,5 @@
 import { clasificar, estadisticas } from "./clasificacion";
+import { setsDe } from "./asignacion";
 import { ganadorDe, partidoListo } from "./reglas";
 import type { Grupo, Partido, Sistema } from "./tipos";
 
@@ -170,8 +171,14 @@ export function armarCuadro(
  * que un cruce de la ronda siguiente quede definido —y con eso, listo para
  * que la asignación de mesas lo proponga— en cuanto se cierra el anterior.
  */
-export function propagar(finales: Partido[], setsPara: number, exigirValidacion = false): void {
+export function propagar(
+  finales: Partido[],
+  setsPara: number | ((p: Partido) => number),
+  exigirValidacion = false,
+): void {
   if (!finales.length) return;
+  //Cada partido puede ir a distintos sets (semis y final a mas)
+  const sets = typeof setsPara === "function" ? setsPara : () => setsPara;
   const rondas = Math.max(...finales.map((p) => p.ronda ?? 0)) + 1;
 
   for (let r = 0; r < rondas - 1; r++) {
@@ -180,7 +187,7 @@ export function propagar(finales: Partido[], setsPara: number, exigirValidacion 
       //Solo en la primera ronda un lugar vacio es descanso; despues es un ganador que falta
       if (r === 0 && p.aId && !p.bId) g = p.aId;
       else if (r === 0 && !p.aId && p.bId) g = p.bId;
-      else g = ganadorDe(p, setsPara, exigirValidacion);
+      else g = ganadorDe(p, sets(p), exigirValidacion);
 
       const sig = finales.find((x) => x.ronda === r + 1 && x.slot === Math.floor((p.slot ?? 0) / 2));
       if (!sig) continue;
@@ -240,6 +247,7 @@ export function podio(
     grupos: Grupo[];
     partidos: Partido[];
     formatoFinales: number;
+    formatoSemis?: number;
     validacionObligatoria: boolean;
     sistema?: Sistema;
     formatoGrupos?: number;
@@ -266,14 +274,14 @@ export function podio(
   const final = finales.find((p) => p.ronda === ultima);
   if (!final) return null;
 
-  const campeon = ganadorDe(final, t.formatoFinales, t.validacionObligatoria);
+  const campeon = ganadorDe(final, setsDe(t, final), t.validacionObligatoria);
   if (!campeon) return null;
   const subcampeon = final.aId === campeon ? final.bId : final.aId;
 
   const terceros = finales
     .filter((p) => p.ronda === ultima - 1 && p.aId && p.bId)
     .map((p) => {
-      const g = ganadorDe(p, t.formatoFinales, t.validacionObligatoria);
+      const g = ganadorDe(p, setsDe(t, p), t.validacionObligatoria);
       return g ? (p.aId === g ? p.bId : p.aId) : null;
     })
     .filter((x): x is string => !!x);

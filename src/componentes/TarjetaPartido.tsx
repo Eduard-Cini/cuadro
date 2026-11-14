@@ -1,4 +1,4 @@
-import { etiquetaEtapa, nombreDe, reducir } from "../nucleo";
+import { etiquetaEtapa, nombreDe, reducir, setsDe } from "../nucleo";
 import type { Fase, Partido, Torneo } from "../nucleo";
 
 interface Props {
@@ -30,7 +30,7 @@ export function Ventaja({ puntos }: { puntos: number }) {
 }
 
 export function TarjetaPartido({ t, p, alAbrir, numero, extra }: Props) {
-  const setsPara = p.etapa === "final" ? t.formatoFinales : t.formatoGrupos;
+  const setsPara = setsDe(t, p);
   const st = reducir(p, setsPara);
   const nom = (id: string | null) => nombreDe(t.jugadores.find((j) => j.id === id), "por definir");
   const arbitro = t.arbitros.find((x) => x.id === p.arbitroId) ?? t.arbitros.find((x) => x.mesa === p.mesa);

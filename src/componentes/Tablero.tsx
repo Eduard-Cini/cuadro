@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { etiquetaEtapa, nombreDe, reducir } from "../nucleo";
+import { etiquetaEtapa, nombreDe, reducir, setsDe } from "../nucleo";
 import type { Lado, Partido, Tarjeta, Torneo } from "../nucleo";
 import { Ic } from "./Iconos";
 
@@ -79,7 +79,7 @@ export function Tablero({
   encabezado,
   textoCerrar,
 }: Props) {
-  const setsPara = p.etapa === "final" ? t.formatoFinales : t.formatoGrupos;
+  const setsPara = setsDe(t, p);
   const st = reducir(p, setsPara);
 
   const jug = (id: string | null) => t.jugadores.find((j) => j.id === id);

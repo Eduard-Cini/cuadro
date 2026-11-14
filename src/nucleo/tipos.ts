@@ -335,6 +335,8 @@ export interface Torneo {
   mesas: number;
   formatoGrupos: Formato;
   formatoFinales: Formato;
+  /** Sets de semis y final cuando van a más que el resto de la llave. Sin valor, igual que formatoFinales. */
+  formatoSemis?: Formato;
   nGrupos: number;
   clasifican: number;
   /** Minutos de descanso entre sets. El reglamento ITTF da uno. */

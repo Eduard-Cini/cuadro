@@ -180,7 +180,7 @@ export function Informe({ t, alSalir }: Props) {
                   </tr>
                   <tr>
                     <th>Eliminatoria</th>
-                    <td>al mejor de {t.formatoFinales * 2 - 1}</td>
+                    <td>al mejor de {t.formatoFinales * 2 - 1}{t.formatoSemis ? `; semis y final al mejor de ${t.formatoSemis * 2 - 1}` : ""}</td>
                   </tr>
                 </>
               )}
@@ -359,8 +359,8 @@ export function Informe({ t, alSalir }: Props) {
                       .filter((p) => p.ronda === r)
                       .sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0))
                       .map((p) => {
-                        const st = reducir(p, t.formatoFinales);
-                        const g = ganadorDe(p, t.formatoFinales, exigir);
+                        const st = reducir(p, setsDe(t, p));
+                        const g = ganadorDe(p, setsDe(t, p), exigir);
                         return (
                           <tr key={p.id}>
                             <td className={g === p.aId ? "gana" : undefined}>{p.aId ? nom(p.aId) : p.ronda === 0 ? "descansa" : "por definir"}</td>

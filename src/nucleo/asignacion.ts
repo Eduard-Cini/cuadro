@@ -7,8 +7,18 @@ export const MINUTO = 60_000;
 const MAX_ALTERNATIVAS = 5;
 
 /** Sets que hay que ganar en este partido, según su etapa. */
-export const setsDe = (t: Torneo, p: Partido): number =>
-  p.etapa === "final" ? t.formatoFinales : t.formatoGrupos;
+export const setsDe = (
+  t: { partidos: Partido[]; formatoFinales: number; formatoSemis?: number; formatoGrupos?: number },
+  p: Partido,
+): number => {
+  if (p.etapa !== "final") return t.formatoGrupos ?? t.formatoFinales;
+  //Semis y final pueden ir a mas sets que el resto de la llave
+  if (t.formatoSemis) {
+    const rondas = Math.max(0, ...t.partidos.filter((x) => x.etapa === "final").map((x) => (x.ronda ?? 0) + 1));
+    if ((p.ronda ?? 0) >= rondas - 2) return t.formatoSemis;
+  }
+  return t.formatoFinales;
+};
 
 /** ¿El partido está ocupando su mesa ahora mismo? */
 export function enCurso(t: Torneo, p: Partido): boolean {

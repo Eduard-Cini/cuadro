@@ -514,7 +514,7 @@ export function Juez({
   const rondas = finales.length ? Math.max(...finales.map((p) => p.ronda ?? 0)) + 1 : 0;
   const campeones = podio(t);
   const pendientes = pendientesDeGrupo(t.partidos, t.formatoGrupos, exigir);
-  const esperando = t.partidos.filter((p) => reducir(p, p.etapa === "final" ? t.formatoFinales : t.formatoGrupos).fase === "por-validar").length;
+  const esperando = t.partidos.filter((p) => reducir(p, setsDe(t, p)).fase === "por-validar").length;
 
   return (
     <div>
@@ -635,7 +635,7 @@ export function Juez({
               <b>
                 {todos
                   ? `al mejor de ${t.formatoGrupos * 2 - 1}`
-                  : `grupos al mejor de ${t.formatoGrupos * 2 - 1} · eliminatoria al mejor de ${t.formatoFinales * 2 - 1}`}
+                  : `grupos al mejor de ${t.formatoGrupos * 2 - 1} · eliminatoria al mejor de ${t.formatoFinales * 2 - 1}${t.formatoSemis ? `, semis y final al mejor de ${t.formatoSemis * 2 - 1}` : ""}`}
               </b>
             </li>
             {!todos && (
@@ -799,6 +799,24 @@ export function Juez({
                         cambiarEstructura((d) => void (d.formatoFinales = Number(e.target.value) as Formato))
                       }
                     >
+                      <option value={2}>Al mejor de 3</option>
+                      <option value={3}>Al mejor de 5</option>
+                      <option value={4}>Al mejor de 7</option>
+                    </select>
+                  </label>
+                  <label className="f">
+                    <span>Semis y final</span>
+                    <select
+                      value={t.formatoSemis ?? 0}
+                      onChange={(e) =>
+                        cambiarEstructura((d) => {
+                          const v = Number(e.target.value);
+                          if (v) d.formatoSemis = v as Formato;
+                          else delete d.formatoSemis;
+                        })
+                      }
+                    >
+                      <option value={0}>Igual que la eliminatoria</option>
                       <option value={2}>Al mejor de 3</option>
                       <option value={3}>Al mejor de 5</option>
                       <option value={4}>Al mejor de 7</option>
@@ -1625,8 +1643,8 @@ export function Juez({
                     .filter((p) => p.ronda === r)
                     .sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0))
                     .map((p) => {
-                      const st = reducir(p, t.formatoFinales);
-                      const g = ganadorDe(p, t.formatoFinales, exigir);
+                      const st = reducir(p, setsDe(t, p));
+                      const g = ganadorDe(p, setsDe(t, p), exigir);
                       const jugable = !!(p.aId && p.bId);
                       const linea = (id: string | null, lado: "a" | "b") => (
                         <div className={g === id ? "gana" : id ? "" : "bye"}>
@@ -1845,7 +1863,7 @@ export function Juez({
               })()}
             <p className="sub" style={{ marginTop: ".8rem" }}>
               Versión {__VERSION__}, compilada el {__COMPILADO__} · Revisión {t.revision} · {t.partidos.reduce((n, p) => n + p.eventos.length, 0)} eventos ·{" "}
-              {t.partidos.filter((p) => partidoListo(p, p.etapa === "final" ? t.formatoFinales : t.formatoGrupos, exigir)).length}{" "}
+              {t.partidos.filter((p) => partidoListo(p, setsDe(t, p), exigir)).length}{" "}
               partidos cerrados
             </p>
           </div>
