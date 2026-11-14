@@ -363,11 +363,11 @@ export function Informe({ t, alSalir }: Props) {
                         const g = ganadorDe(p, t.formatoFinales, exigir);
                         return (
                           <tr key={p.id}>
-                            <td className={g === p.aId ? "gana" : undefined}>{p.aId ? nom(p.aId) : "descansa"}</td>
+                            <td className={g === p.aId ? "gana" : undefined}>{p.aId ? nom(p.aId) : p.ronda === 0 ? "descansa" : "por definir"}</td>
                             <td className="marcador">
                               {st.sets.a}–{st.sets.b}
                             </td>
-                            <td className={g === p.bId ? "gana" : undefined}>{p.bId ? nom(p.bId) : "descansa"}</td>
+                            <td className={g === p.bId ? "gana" : undefined}>{p.bId ? nom(p.bId) : p.ronda === 0 ? "descansa" : "por definir"}</td>
                             <td className="parciales">
                               {st.historial.map((x) => `${x.a}-${x.b}`).join(", ") || "—"}
                             </td>

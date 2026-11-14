@@ -1630,7 +1630,7 @@ export function Juez({
                       const jugable = !!(p.aId && p.bId);
                       const linea = (id: string | null, lado: "a" | "b") => (
                         <div className={g === id ? "gana" : id ? "" : "bye"}>
-                          <span>{id ? nom(id) : p.aId || p.bId ? "descansa" : "por definir"}</span>
+                          <span>{id ? nom(id) : p.ronda === 0 && (p.aId || p.bId) ? "descansa" : "por definir"}</span>
                           <b>{id ? st.sets[lado] : ""}</b>
                         </div>
                       );

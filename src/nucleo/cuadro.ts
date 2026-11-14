@@ -1,4 +1,4 @@
-import { clasificar } from "./clasificacion";
+import { clasificar, estadisticas } from "./clasificacion";
 import { ganadorDe, partidoListo } from "./reglas";
 import type { Grupo, Partido, Sistema } from "./tipos";
 
@@ -55,18 +55,31 @@ export function armarCuadro(
   setsParaGrupos: number,
   exigirValidacion = false,
 ): Partido[] {
-  const clasificados: Array<{ id: string; pos: number; grupo: number }> = [];
+  const clasificados: Array<{ id: string; pos: number; grupo: number; cmp: number[] }> = [];
+  //Proporcion segura: 0 si no hay datos
+  const razon = (a: number, b: number) => (a + b ? a / (a + b) : 0);
   grupos.forEach((gr, g) => {
     const suyos = partidos.filter((p) => p.grupoId === gr.id);
     const ord = clasificar(gr.jugadores, suyos, setsParaGrupos, exigirValidacion);
+    const est = estadisticas(gr.jugadores, suyos, setsParaGrupos, exigirValidacion);
     for (let i = 0; i < clasifican && i < ord.length; i++) {
-      clasificados.push({ id: ord[i], pos: i, grupo: g });
+      const e = est[ord[i]];
+      //Para comparar entre grupos: partidos, sets y puntos ganados, en proporcion
+      const cmp = [razon(e.pg, e.pp), razon(e.sg, e.sp), razon(e.tg, e.tp)];
+      clasificados.push({ id: ord[i], pos: i, grupo: g, cmp });
     }
   });
   if (clasificados.length < 2) return [];
 
-  // Por lugar en el grupo y, dentro de cada lugar, en el orden de los grupos.
-  clasificados.sort((a, b) => a.pos - b.pos || a.grupo - b.grupo);
+  // Por lugar en el grupo y, dentro de cada lugar, por cómo le fue a cada
+  // quien (partidos, sets y puntos ganados, en proporción). Así los mejores
+  // primeros lugares se quedan con los descansos. El orden de los grupos
+  // solo desempata.
+  const porRegistro = (a: (typeof clasificados)[number], b: (typeof clasificados)[number]) => {
+    for (let k = 0; k < a.cmp.length; k++) if (a.cmp[k] !== b.cmp[k]) return b.cmp[k] - a.cmp[k];
+    return a.grupo - b.grupo;
+  };
+  clasificados.sort((a, b) => a.pos - b.pos || porRegistro(a, b));
   let n = 1;
   while (n < clasificados.length) n *= 2;
 
@@ -149,7 +162,9 @@ export function armarCuadro(
 }
 
 /**
- * Sube los ganadores a la ronda siguiente. Un hueco pasa directo.
+ * Sube los ganadores a la ronda siguiente. En la primera ronda, quien no
+ * tiene rival pasa directo; en las demás, un lugar vacío es un ganador que
+ * todavía no se conoce.
  *
  * Se llama cada vez que entra un resultado de un árbitro: es lo que hace
  * que un cruce de la ronda siguiente quede definido —y con eso, listo para
@@ -162,8 +177,9 @@ export function propagar(finales: Partido[], setsPara: number, exigirValidacion 
   for (let r = 0; r < rondas - 1; r++) {
     for (const p of finales.filter((x) => x.ronda === r)) {
       let g: string | null;
-      if (p.aId && !p.bId) g = p.aId;
-      else if (!p.aId && p.bId) g = p.bId;
+      //Solo en la primera ronda un lugar vacio es descanso; despues es un ganador que falta
+      if (r === 0 && p.aId && !p.bId) g = p.aId;
+      else if (r === 0 && !p.aId && p.bId) g = p.bId;
       else g = ganadorDe(p, setsPara, exigirValidacion);
 
       const sig = finales.find((x) => x.ronda === r + 1 && x.slot === Math.floor((p.slot ?? 0) / 2));

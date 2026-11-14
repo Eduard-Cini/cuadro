@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { armarCuadro, ordenDeSiembra } from "./cuadro";
+import { armarCuadro, ordenDeSiembra, propagar } from "./cuadro";
 import type { Grupo, Partido } from "./tipos";
 
 /*
@@ -89,5 +89,18 @@ describe("cuadro desde los grupos", () => {
   it("tres por grupo con tres grupos: nadie repite rival de grupo en la primera ronda", () => {
     const fin = armarCuadro(grupos(4, 4, 4), [], 3, 2);
     for (const p of primera(fin)) if (p.aId && p.bId) expect(grupoDe(p.aId)).not.toBe(grupoDe(p.bId));
+  });
+});
+
+describe("propagar con descansos", () => {
+  const p = (ronda: number, slot: number, aId: string | null, bId: string | null): Partido =>
+    ({ id: `r${ronda}s${slot}`, etapa: "final", ronda, slot, aId, bId, mesa: 0, orden: 0, eventos: [] }) as Partido;
+
+  it("en semis, el lugar vacío espera al ganador y nadie pasa a la final", () => {
+    const f = [p(0, 0, "A", null), p(0, 1, "B", "C"), p(0, 2, "D", null), p(0, 3, "E", "F"), p(1, 0, null, null), p(1, 1, null, null), p(2, 0, null, null)];
+    propagar(f, 2);
+    expect([f[4].aId, f[4].bId]).toEqual(["A", null]);
+    expect([f[5].aId, f[5].bId]).toEqual(["D", null]);
+    expect([f[6].aId, f[6].bId]).toEqual([null, null]);
   });
 });
