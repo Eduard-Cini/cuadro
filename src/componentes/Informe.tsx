@@ -25,6 +25,9 @@ interface Props {
 const fecha = (ms: number) =>
   new Date(ms).toLocaleString("es-MX", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
+const soloFecha = (ms: number) =>
+  new Date(ms).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
+
 const hora = (ms: number | null) =>
   ms === null ? "—" : new Date(ms).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
 
@@ -87,8 +90,12 @@ export function Informe({ t, alSalir }: Props) {
     0,
   );
 
-  const primero = jugados[0]?.st.desde ?? null;
+  //Los resultados que llegan por mensaje no traen hora de inicio: cuenta la hora en que se registraron
+  const momentos = jugados.map(({ st }) => st.desde ?? st.hasta).filter((x): x is number => x != null);
+  const primero = momentos.length ? Math.min(...momentos) : null;
   const ultimo = jugados[jugados.length - 1]?.st.hasta ?? null;
+  //Un torneo a distancia puede durar varios días: entonces se dan las dos fechas
+  const variosDias = primero !== null && ultimo !== null && soloFecha(primero) !== soloFecha(ultimo);
 
   return (
     <div className="informe">
@@ -109,7 +116,11 @@ export function Informe({ t, alSalir }: Props) {
           <h1>{t.nombre || "Torneo"}</h1>
           <p>
             {t.sede && `${t.sede} · `}
-            {primero ? fecha(primero) : "sin partidos jugados"}
+            {primero === null
+              ? "sin partidos jugados"
+              : variosDias
+                ? `del ${soloFecha(primero)} al ${soloFecha(ultimo!)}`
+                : fecha(primero)}
           </p>
           <p className="inf-sub">
             Acta generada el {fecha(Date.now())} · TTorneo v{__VERSION__}
@@ -224,7 +235,10 @@ export function Informe({ t, alSalir }: Props) {
                 <tr>
                   <th>Jornada</th>
                   <td>
-                    de {hora(primero)} a {hora(ultimo)} · {jugados.length} partidos
+                    {variosDias
+                      ? `del ${soloFecha(primero)} al ${soloFecha(ultimo)}`
+                      : `de ${hora(primero)} a ${hora(ultimo)}`}{" "}
+                    · {jugados.length} partidos
                   </td>
                 </tr>
               )}

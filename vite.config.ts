@@ -8,12 +8,12 @@ const paquete = JSON.parse(readFileSync(new URL("./package.json", import.meta.ur
 
 export default defineConfig(({ mode }) => {
   // La ruta base cambia según dónde se publique. En GitHub Pages el sitio
-  // cuelga de /cuadro/; servido por el relevo del gimnasio, de la raíz.
+  // cuelga de /ttorneo/; servido por el relevo del gimnasio, de la raíz.
   //
   // Va por modo y no por variable de entorno a propósito: en Windows, una
   // variable cuyo valor es «/» se convierte en una ruta del sistema antes
   // de llegar aquí, y el sitio se compila con enlaces rotos.
-  const base = mode === "relevo" ? "/" : (process.env.BASE_PATH ?? "/cuadro/");
+  const base = mode === "relevo" ? "/" : (process.env.BASE_PATH ?? "/ttorneo/");
 
   return {
   base,

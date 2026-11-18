@@ -527,7 +527,7 @@ npm run dev          # aplicación en desarrollo
 npm test             # pruebas del núcleo
 npm run simulacro    # ensayo completo contra un relevo real
 npm run test:todo    # las dos cosas
-npm run build        # publicar en /cuadro/ (GitHub Pages)
+npm run build        # publicar en /ttorneo/ (GitHub Pages)
 npm run build:relevo # servir desde la raíz, que es lo que usa el relevo
 ```
 
